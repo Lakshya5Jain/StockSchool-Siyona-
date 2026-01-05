@@ -3,15 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, Send, Sparkles, User, Loader2 } from "lucide-react";
+import { MessageCircle, Send, Sparkles, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type Message = {
   role: "user" | "assistant";
   content: string;
 };
-
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tutor`;
 
 const suggestedQuestions = [
   "What is a stock?",
@@ -24,11 +22,10 @@ export function AITutor() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hi! I'm your StockSchool AI tutor. 👋 I'm here to help you understand how the stock market works. Ask me anything about stocks, companies, ETFs, or investing concepts. What would you like to learn about today?",
+      content: "Hi! I'm your StockSchool AI tutor. 👋\n\nThe backend API is currently being set up. Once your Supabase backend is configured, I'll be able to help you understand how the stock market works. Check back soon!",
     },
   ]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -38,102 +35,16 @@ export function AITutor() {
     }
   }, [messages]);
 
-  const streamChat = async (userMessages: Message[]) => {
-    const resp = await fetch(CHAT_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
-      body: JSON.stringify({ messages: userMessages }),
-    });
-
-    if (resp.status === 429) {
-      throw new Error("Too many requests. Please wait a moment.");
-    }
-    if (resp.status === 402) {
-      throw new Error("Service temporarily unavailable.");
-    }
-    if (!resp.ok || !resp.body) {
-      throw new Error("Failed to connect to AI tutor");
-    }
-
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let textBuffer = "";
-    let assistantContent = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      
-      textBuffer += decoder.decode(value, { stream: true });
-
-      let newlineIndex: number;
-      while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-        let line = textBuffer.slice(0, newlineIndex);
-        textBuffer = textBuffer.slice(newlineIndex + 1);
-
-        if (line.endsWith("\r")) line = line.slice(0, -1);
-        if (line.startsWith(":") || line.trim() === "") continue;
-        if (!line.startsWith("data: ")) continue;
-
-        const jsonStr = line.slice(6).trim();
-        if (jsonStr === "[DONE]") break;
-
-        try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content;
-          if (content) {
-            assistantContent += content;
-            setMessages((prev) => {
-              const last = prev[prev.length - 1];
-              if (last?.role === "assistant" && prev.length > 1) {
-                return prev.map((m, i) =>
-                  i === prev.length - 1 ? { ...m, content: assistantContent } : m
-                );
-              }
-              return [...prev, { role: "assistant", content: assistantContent }];
-            });
-          }
-        } catch {
-          textBuffer = line + "\n" + textBuffer;
-          break;
-        }
-      }
-    }
-  };
-
   const handleSend = async (text?: string) => {
     const messageText = text || input.trim();
-    if (!messageText || isLoading) return;
+    if (!messageText) return;
 
-    const userMsg: Message = { role: "user", content: messageText };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
+    toast({
+      title: "Backend not configured",
+      description: "The AI tutor backend will be available once Supabase is set up.",
+      variant: "default",
+    });
     setInput("");
-    setIsLoading(true);
-
-    try {
-      await streamChat(newMessages.slice(1)); // Skip initial greeting
-    } catch (error) {
-      console.error("AI tutor error:", error);
-      toast({
-        title: "Oops!",
-        description: error instanceof Error ? error.message : "Something went wrong. Try again!",
-        variant: "destructive",
-      });
-      // Remove the user message if streaming failed before any response
-      setMessages((prev) => {
-        const lastAssistant = prev.filter(m => m.role === "assistant").pop();
-        if (lastAssistant && lastAssistant.content === messages[0].content) {
-          return prev.slice(0, -1);
-        }
-        return prev;
-      });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -185,16 +96,6 @@ export function AITutor() {
                 </div>
               </div>
             ))}
-            {isLoading && messages[messages.length - 1]?.role === "user" && (
-              <div className="flex gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div className="rounded-2xl px-4 py-2.5 bg-muted">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              </div>
-            )}
           </div>
         </ScrollArea>
 
@@ -221,21 +122,17 @@ export function AITutor() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask me anything about stocks..."
+            placeholder="Backend API coming soon..."
             className="min-h-[44px] max-h-[120px] resize-none"
-            disabled={isLoading}
+            disabled
           />
           <Button
             onClick={() => handleSend()}
-            disabled={!input.trim() || isLoading}
+            disabled
             size="icon"
             className="shrink-0"
           >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            <Send className="h-4 w-4" />
           </Button>
         </div>
       </CardContent>
