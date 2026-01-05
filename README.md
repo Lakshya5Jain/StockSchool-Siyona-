@@ -1,4 +1,5 @@
-# Welcome to your Lovable project
+# StockSchool
+AI Stock School
 
 ## Project info
 
