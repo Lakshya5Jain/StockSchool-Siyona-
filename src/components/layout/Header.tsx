@@ -1,13 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, BookOpen, Gamepad2, AlertTriangle, Shield, Menu, X } from "lucide-react";
+import { TrendingUp, BookOpen, Gamepad2, Shield, Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
   { path: "/learn", label: "Learn", icon: BookOpen },
   { path: "/simulator", label: "Simulator", icon: Gamepad2 },
-  { path: "/mistakes", label: "Common Mistakes", icon: AlertTriangle },
-  { path: "/safety", label: "Safety", icon: Shield },
+  { path: "/safety", label: "Common Mistakes & Safety", icon: Shield },
 ];
 
 export function Header() {
@@ -22,7 +21,7 @@ export function Header() {
             <img src="/logo.png" alt="Logo" className="h-full w-full object-contain" />
           </div>
           <span className="font-display text-xl font-bold text-foreground">
-            Stock<span className="text-primary">School</span>
+            Stock<span className="text-accent">School</span>
           </span>
         </Link>
 

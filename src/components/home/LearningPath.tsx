@@ -48,34 +48,34 @@ const learningSteps = [
 
 export function LearningPath() {
   return (
-    <section className="py-20 bg-muted/30">
+    <section className="py-24 bg-white">
       <div className="container">
-        <div className="text-center mb-12">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+        <div className="text-center mb-16">
+          <h2 className="font-display text-3xl md:text-4xl font-semibold text-foreground mb-6">
             Your Learning Journey
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg text-foreground/70 max-w-2xl mx-auto">
             Follow our step-by-step guide to understand how markets work, from basic concepts to hands-on practice.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {learningSteps.map((step, index) => (
             <LearningStepCard key={step.number} step={step} index={index} />
           ))}
         </div>
 
         {/* Learning Loop Diagram */}
-        <div className="mt-16 text-center">
-          <div className="inline-flex items-center gap-3 rounded-full bg-card border border-border px-6 py-3 shadow-md">
-            <span className="font-semibold text-primary">Learn</span>
+        <div className="mt-20 text-center">
+          <div className="inline-flex items-center gap-4 rounded-lg bg-card border border-border px-8 py-4">
+            <span className="font-semibold text-accent">Learn</span>
             <span className="text-muted-foreground">→</span>
-            <span className="font-semibold text-secondary">Simulate</span>
+            <span className="font-semibold text-accent">Simulate</span>
             <span className="text-muted-foreground">→</span>
             <span className="font-semibold text-accent">Reflect</span>
             <span className="text-muted-foreground">→</span>
-            <span className="font-semibold text-success">Learn More</span>
-            <RotateCcw className="h-5 w-5 text-primary animate-pulse-soft" />
+            <span className="font-semibold text-accent">Learn More</span>
+            <RotateCcw className="h-5 w-5 text-accent animate-pulse-soft" />
           </div>
         </div>
       </div>
@@ -85,14 +85,6 @@ export function LearningPath() {
 
 function LearningStepCard({ step, index }: { step: typeof learningSteps[0]; index: number }) {
   const Icon = step.icon;
-  
-  const colorClasses: Record<string, string> = {
-    primary: "bg-primary-light text-primary",
-    secondary: "bg-secondary-light text-secondary",
-    accent: "bg-accent-light text-accent",
-    success: "bg-success-light text-success",
-    warning: "bg-warning-light text-warning",
-  };
 
   return (
     <Card variant="interactive" className="relative overflow-hidden">
@@ -102,7 +94,7 @@ function LearningStepCard({ step, index }: { step: typeof learningSteps[0]; inde
       </div>
       
       <CardHeader className="pb-2">
-        <div className={`inline-flex h-14 w-14 items-center justify-center rounded-xl ${colorClasses[step.color]} mb-3`}>
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-accent-lighter text-accent mb-3">
           <Icon className="h-7 w-7" />
         </div>
         <CardTitle className="text-xl">{step.title}</CardTitle>

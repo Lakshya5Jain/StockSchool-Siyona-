@@ -58,8 +58,8 @@ export function AITutor() {
     <Card variant="highlighted" className="h-[600px] flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-light">
-            <Sparkles className="h-5 w-5 text-primary" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-lighter">
+            <Sparkles className="h-5 w-5 text-accent" />
           </div>
           AI Tutor
         </CardTitle>

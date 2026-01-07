@@ -491,7 +491,7 @@ const LessonDetail = () => {
   const colorClasses: Record<string, string> = {
     primary: "bg-primary-light text-primary",
     secondary: "bg-secondary-light text-secondary",
-    accent: "bg-accent-light text-accent",
+    accent: "bg-accent-lighter text-accent",
     success: "bg-success-light text-success",
     warning: "bg-warning-light text-warning",
     destructive: "bg-destructive/10 text-destructive",
@@ -646,8 +646,8 @@ const LessonDetail = () => {
                   <Card variant="highlighted" className="mb-8 border-2 border-secondary/30">
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary-light flex-shrink-0">
-                          <Lightbulb className="h-5 w-5 text-secondary" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-lighter flex-shrink-0">
+                          <Lightbulb className="h-5 w-5 text-accent" />
                         </div>
                         <div>
                           <h3 className="font-semibold text-foreground mb-2">Think of it this way...</h3>
@@ -687,8 +687,8 @@ const LessonDetail = () => {
               <div className="animate-slide-up">
                 {/* Question Header */}
                 <div className="flex items-center gap-4 mb-8">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-light">
-                    <MessageCircle className="h-8 w-8 text-primary" />
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-lighter">
+                    <MessageCircle className="h-8 w-8 text-accent" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Concept Check</p>

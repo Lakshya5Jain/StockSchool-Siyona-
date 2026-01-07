@@ -263,7 +263,7 @@ const startSimulation = () => {
         <section className="bg-gradient-hero py-12 md:py-16">
           <div className="container">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-secondary-light px-4 py-2 text-sm font-medium text-secondary mb-4">
+              <div className="inline-flex items-center gap-2 rounded-full bg-accent-lighter px-4 py-2 text-sm font-medium text-accent-dark mb-4">
                 <Gamepad2 className="h-4 w-4" />
                 Educational Simulation
               </div>
@@ -283,8 +283,8 @@ const startSimulation = () => {
           <div className="container py-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-secondary-light">
-                  <Coins className="h-7 w-7 text-secondary" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent-lighter">
+                  <Coins className="h-7 w-7 text-accent" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Your Virtual Tokens</p>
@@ -342,7 +342,7 @@ const startSimulation = () => {
                   <Card variant="highlighted">
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-primary text-primary-foreground">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent text-accent-foreground">
                           <PieChart className="h-7 w-7" />
                         </div>
                         <div className="flex-1">
@@ -511,8 +511,8 @@ const startSimulation = () => {
                   <Card className="border-2 border-primary/20">
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-light">
-                          <Sparkles className="h-6 w-6 text-primary" />
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-lighter">
+                          <Sparkles className="h-6 w-6 text-accent" />
                         </div>
                         <div>
                           <h3 className="font-display font-semibold text-lg text-foreground mb-2">
@@ -560,12 +560,12 @@ function CompanyCard({
   const Icon = company.icon;
   
   const colorClasses: Record<string, string> = {
-    primary: "bg-primary-light text-primary",
-    secondary: "bg-secondary-light text-secondary",
-    accent: "bg-accent-light text-accent",
-    success: "bg-success-light text-success",
-    warning: "bg-warning-light text-warning",
-    destructive: "bg-destructive/10 text-destructive",
+    primary: "bg-accent-lighter text-accent",
+    secondary: "bg-accent-lighter text-accent",
+    accent: "bg-accent-lighter text-accent",
+    success: "bg-accent-lighter text-accent",
+    warning: "bg-accent-lighter text-accent",
+    destructive: "bg-accent-lighter text-accent",
   };
 
   const riskColors: Record<string, string> = {

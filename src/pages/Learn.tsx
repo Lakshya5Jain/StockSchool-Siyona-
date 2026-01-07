@@ -125,7 +125,7 @@ const Learn = () => {
         <section className="bg-gradient-hero py-12 md:py-16">
           <div className="container">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary-light px-4 py-2 text-sm font-medium text-primary mb-4">
+              <div className="inline-flex items-center gap-2 rounded-full bg-accent-lighter px-4 py-2 text-sm font-medium text-accent-dark mb-4">
                 <Sparkles className="h-4 w-4" />
                 AI-Powered Lessons
               </div>
@@ -194,8 +194,8 @@ const Learn = () => {
                     <div className="space-y-3">
                       <Card variant="interactive" className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-light">
-                            <Sparkles className="h-5 w-5 text-primary" />
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-lighter">
+                            <Sparkles className="h-5 w-5 text-accent" />
                           </div>
                           <div>
                             <h3 className="font-semibold text-foreground">Ask anything!</h3>
@@ -205,8 +205,8 @@ const Learn = () => {
                       </Card>
                       <Card variant="interactive" className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success-light">
-                            <CheckCircle2 className="h-5 w-5 text-success" />
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-lighter">
+                            <CheckCircle2 className="h-5 w-5 text-accent" />
                           </div>
                           <div>
                             <h3 className="font-semibold text-foreground">Safe & Educational</h3>
@@ -216,8 +216,8 @@ const Learn = () => {
                       </Card>
                       <Card variant="interactive" className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary-light">
-                            <MessageCircle className="h-5 w-5 text-secondary" />
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-lighter">
+                            <MessageCircle className="h-5 w-5 text-accent" />
                           </div>
                           <div>
                             <h3 className="font-semibold text-foreground">Follow-up questions</h3>
@@ -251,11 +251,11 @@ function LessonCard({
   const Icon = lesson.icon;
   
   const colorClasses: Record<string, string> = {
-    primary: "bg-primary-light text-primary",
-    secondary: "bg-secondary-light text-secondary",
-    accent: "bg-accent-light text-accent",
-    success: "bg-success-light text-success",
-    warning: "bg-warning-light text-warning",
+    primary: "bg-accent-lighter text-accent",
+    secondary: "bg-accent-lighter text-accent",
+    accent: "bg-accent-lighter text-accent",
+    success: "bg-accent-lighter text-accent",
+    warning: "bg-accent-lighter text-accent",
   };
 
   return (
@@ -315,19 +315,11 @@ function LessonPreview({ lesson }: { lesson?: typeof lessons[0] }) {
   }
 
   const Icon = lesson.icon;
-  
-  const colorClasses: Record<string, string> = {
-    primary: "bg-primary-light text-primary",
-    secondary: "bg-secondary-light text-secondary",
-    accent: "bg-accent-light text-accent",
-    success: "bg-success-light text-success",
-    warning: "bg-warning-light text-warning",
-  };
 
   return (
     <Card variant="highlighted" className="animate-scale-in">
       <CardHeader>
-        <div className={`inline-flex h-14 w-14 items-center justify-center rounded-xl ${colorClasses[lesson.color]} mb-4`}>
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-accent-lighter text-accent mb-4">
           <Icon className="h-7 w-7" />
         </div>
         <CardTitle className="text-2xl">{lesson.title}</CardTitle>
@@ -336,7 +328,7 @@ function LessonPreview({ lesson }: { lesson?: typeof lessons[0] }) {
       <CardContent className="space-y-6">
         <div className="rounded-xl bg-muted/50 p-4">
           <h4 className="font-semibold text-sm text-foreground mb-2 flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
+            <Sparkles className="h-4 w-4 text-accent" />
             Preview
           </h4>
           <p className="text-muted-foreground leading-relaxed">

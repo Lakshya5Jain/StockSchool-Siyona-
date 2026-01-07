@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { TrendingUp, Shield, BookOpen } from "lucide-react";
+import { TrendingUp, Shield, BookOpen, AlertTriangle } from "lucide-react";
 
 export function Footer() {
   return (
@@ -13,11 +13,11 @@ export function Footer() {
                 <img src="/logo.png" alt="Logo" className="h-full w-full object-contain" />
               </div>
               <span className="font-display text-xl font-bold text-foreground">
-                Stock<span className="text-primary">School</span>
+                Stock<span className="text-accent">School</span>
               </span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs">
-              An educational platform helping middle school students understand how markets work through interactive lessons and simulations.
+              An educational platform helping students understand how markets work through interactive lessons and simulations.
             </p>
           </div>
 
@@ -25,15 +25,19 @@ export function Footer() {
           <div className="space-y-4">
             <h4 className="font-display font-semibold text-foreground">Quick Links</h4>
             <nav className="flex flex-col gap-2">
-              <Link to="/learn" className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
+              <Link to="/learn" className="text-sm text-muted-foreground hover:text-accent transition-colors flex items-center gap-2">
                 <BookOpen className="h-4 w-4" />
                 Learning Guide
               </Link>
-              <Link to="/simulator" className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
+              <Link to="/simulator" className="text-sm text-muted-foreground hover:text-accent transition-colors flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
                 Market Simulator
               </Link>
-              <Link to="/safety" className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
+              <Link to="/mistakes" className="text-sm text-muted-foreground hover:text-accent transition-colors flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Common Mistakes
+              </Link>
+              <Link to="/safety" className="text-sm text-muted-foreground hover:text-accent transition-colors flex items-center gap-2">
                 <Shield className="h-4 w-4" />
                 Safety & Ethics
               </Link>
@@ -56,7 +60,7 @@ export function Footer() {
             © {new Date().getFullYear()} StockSchool. Designed for education.
           </p>
           <div className="flex items-center gap-4">
-            <Link to="/safety" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <Link to="/safety" className="text-sm text-muted-foreground hover:text-accent transition-colors">
               Privacy & Safety
             </Link>
           </div>

@@ -24,7 +24,7 @@ export function NewsSection({ news, currentDay, isPreview = false }: NewsSection
     <Card className={isPreview ? "border-2 border-secondary/30" : ""}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Newspaper className="h-5 w-5 text-primary" />
+          <Newspaper className="h-5 w-5 text-accent" />
           {isPreview ? "Upcoming News (Read Before Investing!)" : "Market News"}
         </CardTitle>
         {isPreview && (

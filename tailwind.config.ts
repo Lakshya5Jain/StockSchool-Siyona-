@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Nunito', 'sans-serif'],
-        display: ['Space Grotesk', 'sans-serif'],
+        sans: ['Lora', 'serif'],
+        display: ['Lora', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -46,6 +46,8 @@ export default {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
           light: "hsl(var(--accent-light))",
+          lighter: "hsl(var(--accent-lighter))",
+          dark: "hsl(var(--accent-dark))",
         },
         success: {
           DEFAULT: "hsl(var(--success))",

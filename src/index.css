@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,38 +6,40 @@
 
 @layer base {
   :root {
-    /* Primary - Teal for trust and learning */
-    --primary: 175 84% 32%;
+    /* Primary - Charcoal (#2F2F2F) */
+    --primary: 0 0% 18%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 175 76% 94%;
-    --primary-glow: 175 84% 45%;
+    --primary-light: 0 0% 95%;
+    --primary-glow: 0 0% 25%;
     
-    /* Secondary - Warm amber for engagement */
-    --secondary: 38 92% 50%;
+    /* Accent - Mint Green (#6FBF8F) and variations */
+    --accent: 145 40% 59%; /* Base mint green */
+    --accent-foreground: 0 0% 100%;
+    --accent-light: 145 40% 75%; /* Light mint */
+    --accent-lighter: 145 40% 88%; /* Very light mint for backgrounds */
+    --accent-dark: 145 40% 42%; /* Dark mint */
+    
+    /* Secondary - Using mint green variations */
+    --secondary: 145 40% 65%; /* Slightly lighter mint */
     --secondary-foreground: 0 0% 100%;
-    --secondary-light: 38 100% 94%;
+    --secondary-light: 145 40% 80%; /* Light mint */
     
-    /* Background - Soft cream/white */
-    --background: 40 33% 98%;
-    --foreground: 220 25% 18%;
+    /* Background - White */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 18%; /* Charcoal */
     
     /* Cards */
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 18%;
+    --card-foreground: 0 0% 18%;
     
-    /* Muted */
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 10% 46%;
+    /* Muted - Light gray with mint tint */
+    --muted: 145 20% 96%;
+    --muted-foreground: 0 0% 45%;
     
-    /* Accent - Soft purple for highlights */
-    --accent: 262 83% 58%;
-    --accent-foreground: 0 0% 100%;
-    --accent-light: 262 100% 96%;
-    
-    /* Success - Green */
-    --success: 152 69% 40%;
+    /* Success - Using mint green */
+    --success: 145 40% 50%;
     --success-foreground: 0 0% 100%;
-    --success-light: 152 76% 94%;
+    --success-light: 145 40% 88%;
     
     /* Warning - Orange */
     --warning: 25 95% 53%;
@@ -50,61 +52,61 @@
     
     /* UI Elements */
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 18%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 175 84% 32%;
+    --popover-foreground: 0 0% 18%;
+    --border: 145 20% 90%;
+    --input: 145 20% 90%;
+    --ring: 145 40% 59%; /* Mint green */
     --radius: 1rem;
     
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 25% 18%;
-    --sidebar-primary: 175 84% 32%;
+    --sidebar-foreground: 0 0% 18%;
+    --sidebar-primary: 0 0% 18%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 175 76% 94%;
-    --sidebar-accent-foreground: 175 84% 32%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 175 84% 32%;
+    --sidebar-accent: 145 40% 88%;
+    --sidebar-accent-foreground: 145 40% 42%;
+    --sidebar-border: 145 20% 90%;
+    --sidebar-ring: 145 40% 59%;
     
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(175, 84%, 32%), hsl(175, 84%, 45%));
-    --gradient-secondary: linear-gradient(135deg, hsl(38, 92%, 50%), hsl(45, 93%, 58%));
-    --gradient-accent: linear-gradient(135deg, hsl(262, 83%, 58%), hsl(280, 80%, 60%));
-    --gradient-hero: linear-gradient(180deg, hsl(175, 76%, 94%) 0%, hsl(var(--background)) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0, 0%, 100%) 0%, hsl(220, 14%, 98%) 100%);
+    /* Gradients - Using mint green variations */
+    --gradient-primary: linear-gradient(135deg, hsl(0, 0%, 18%), hsl(0, 0%, 25%));
+    --gradient-secondary: linear-gradient(135deg, hsl(145, 40%, 59%), hsl(145, 40%, 65%));
+    --gradient-accent: linear-gradient(135deg, hsl(145, 40%, 59%), hsl(145, 40%, 75%));
+    --gradient-hero: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(0, 0%, 100%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0, 0%, 100%) 0%, hsl(145, 40%, 96%) 100%);
     
     /* Shadows */
-    --shadow-sm: 0 1px 2px hsl(220 25% 18% / 0.05);
-    --shadow-md: 0 4px 12px hsl(220 25% 18% / 0.08);
-    --shadow-lg: 0 12px 32px hsl(220 25% 18% / 0.12);
-    --shadow-glow: 0 0 24px hsl(175, 84%, 32%, 0.25);
-    --shadow-glow-secondary: 0 0 24px hsl(38, 92%, 50%, 0.3);
+    --shadow-sm: 0 1px 2px hsl(0 0% 18% / 0.05);
+    --shadow-md: 0 4px 12px hsl(0 0% 18% / 0.08);
+    --shadow-lg: 0 12px 32px hsl(0 0% 18% / 0.12);
+    --shadow-glow: 0 0 24px hsl(145, 40%, 59%, 0.25);
+    --shadow-glow-secondary: 0 0 24px hsl(145, 40%, 65%, 0.3);
   }
 
   .dark {
-    --primary: 175 76% 50%;
-    --primary-foreground: 220 25% 10%;
-    --primary-light: 175 50% 15%;
+    --primary: 0 0% 85%;
+    --primary-foreground: 0 0% 18%;
+    --primary-light: 0 0% 20%;
     
-    --secondary: 38 92% 55%;
-    --secondary-foreground: 220 25% 10%;
+    --secondary: 145 40% 70%;
+    --secondary-foreground: 0 0% 18%;
     
-    --background: 220 25% 8%;
-    --foreground: 220 14% 96%;
+    --background: 0 0% 8%;
+    --foreground: 0 0% 96%;
     
-    --card: 220 25% 12%;
-    --card-foreground: 220 14% 96%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 96%;
     
-    --muted: 220 20% 16%;
-    --muted-foreground: 220 10% 60%;
+    --muted: 145 20% 16%;
+    --muted-foreground: 145 20% 60%;
     
-    --accent: 262 83% 65%;
-    --accent-foreground: 220 25% 10%;
+    --accent: 145 40% 65%;
+    --accent-foreground: 0 0% 18%;
     
-    --popover: 220 25% 12%;
-    --popover-foreground: 220 14% 96%;
-    --border: 220 20% 20%;
-    --input: 220 20% 20%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 96%;
+    --border: 145 20% 20%;
+    --input: 145 20% 20%;
   }
 }
 
@@ -115,11 +117,18 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Nunito', sans-serif;
+    font-family: 'Lora', serif;
+    font-weight: 400; /* Lora Regular */
   }
   
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Lora', serif;
+    font-weight: 600; /* Lora SemiBold */
+  }
+  
+  button, .btn, [role="button"] {
+    font-family: 'Lora', serif;
+    font-weight: 500; /* Lora Medium */
   }
 }
 
@@ -152,6 +161,10 @@
   
   .shadow-glow-secondary {
     box-shadow: var(--shadow-glow-secondary);
+  }
+  
+  .video-mint-filter {
+    filter: grayscale(100%) brightness(0.7) sepia(100%) hue-rotate(145deg) saturate(250%) contrast(1.1);
   }
 }
 

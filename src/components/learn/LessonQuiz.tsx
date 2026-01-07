@@ -150,7 +150,7 @@ export function LessonQuiz({ questions, lessonTitle, onComplete }: LessonQuizPro
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 font-medium",
-                    !hasAnswered && isSelected && "border-primary bg-primary text-primary-foreground",
+                    !hasAnswered && isSelected && "border-accent bg-accent text-accent-foreground",
                     !hasAnswered && !isSelected && "border-muted-foreground/30",
                     hasAnswered && isCorrectOption && "border-success bg-success text-success-foreground",
                     hasAnswered && isSelected && !isCorrectOption && "border-destructive bg-destructive text-destructive-foreground"

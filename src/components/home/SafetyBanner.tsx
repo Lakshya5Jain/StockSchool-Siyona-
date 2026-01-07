@@ -6,9 +6,9 @@ export function SafetyBanner() {
   return (
     <section className="py-20">
       <div className="container">
-        <div className="rounded-3xl bg-gradient-to-br from-primary-light via-card to-secondary-light border border-border p-8 md:p-12">
+        <div className="rounded-3xl bg-gradient-to-br from-accent-lighter via-card to-accent-light border border-border p-8 md:p-12">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-success-light text-success mb-6">
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-accent-lighter text-accent-dark mb-6">
               <Shield className="h-8 w-8" />
             </div>
             
@@ -63,7 +63,7 @@ function SafetyPoint({
   return (
     <div className="text-center">
       <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-card shadow-sm mb-3">
-        <Icon className="h-6 w-6 text-primary" />
+        <Icon className="h-6 w-6 text-accent" />
       </div>
       <h3 className="font-semibold text-foreground mb-1">{title}</h3>
       <p className="text-sm text-muted-foreground">{description}</p>
