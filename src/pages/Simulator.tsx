@@ -212,7 +212,7 @@ const levelConfig = {
     showETF: true,
     volatilityMultiplier: 0.8,
     winConditions: {
-      portfolioValue: 10800, // Final portfolio ≥ $10,800
+      portfolioValue: 10600, // Final portfolio ≥ $10,600 (lowered from $10,800 for achievability with drawdown constraint)
       maxDrawdown: 0.10, // Maximum drawdown ≤ 10%
     },
   },
@@ -285,7 +285,7 @@ const levelConfig = {
     showMarketMood: true,
     marketRegime: "random", // Can be "bull", "bear", "sideways", or "random"
     winConditions: {
-      bullPortfolioValue: 11500, // Bull market: Portfolio ≥ $11,500
+      bullPortfolioValue: 11200, // Bull market: Portfolio ≥ $11,200 (lowered from $11,500 for achievability)
       bearPortfolioValue: 9800, // Bear market: Portfolio ≥ $9,800
     },
   },
@@ -315,7 +315,7 @@ const levelConfig = {
     showHoldings: true,
     winConditions: {
       minHoldingPeriod: 0.7, // Hold at least one stock ≥ 70% of level
-      portfolioValue: 11300, // Final portfolio ≥ $11,300
+      portfolioValue: 11100, // Final portfolio ≥ $11,100 (lowered from $11,300 for achievability with holding constraint)
     },
   },
   11: {
@@ -342,7 +342,7 @@ const levelConfig = {
     volatilityMultiplier: 0.8,
     emphasizeCompounding: true,
     winConditions: {
-      portfolioValue: 12000, // Portfolio ≥ $12,000
+      portfolioValue: 11700, // Portfolio ≥ $11,700 (lowered from $12,000 for achievability)
       outperformETFBy: 0.02, // Outperform ETF by ≥ 2%
     },
   },
@@ -699,19 +699,19 @@ const startSimulation = () => {
         baseChange += 1.5 + Math.random() * 1; // Add ~1.5-2.5 upward bias per day
       }
       
-      let newsImpact = 0;
+        let newsImpact = 0;
 
-      if (todayNews && todayNews.affectedStocks.includes(company.name)) {
+        if (todayNews && todayNews.affectedStocks.includes(company.name)) {
         if (todayNews.impact === "positive") {
           newsImpact = 8 + Math.random() * 7;
         } else if (todayNews.impact === "negative") {
           newsImpact = -(8 + Math.random() * 7);
         }
         // Neutral news has no impact
-      }
+        }
 
-      newPrices[company.id] = Math.max(10, newPrices[company.id] + baseChange + newsImpact);
-    });
+        newPrices[company.id] = Math.max(10, newPrices[company.id] + baseChange + newsImpact);
+      });
 
       // Market mood affects price movement for level 8
       if (currentLevel === 8) {
@@ -815,8 +815,8 @@ const startSimulation = () => {
       }
       return false;
     } else if (currentLevel === 3) {
-      // Final portfolio ≥ $10,800 AND maximum drawdown ≤ 10%
-      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 10800);
+      // Final portfolio ≥ $10,600 AND maximum drawdown ≤ 10%
+      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 10600);
       const withinMaxDrawdown = maxDrawdown <= (winCond.maxDrawdown || 0.10);
       return meetsPortfolioTarget && withinMaxDrawdown;
     } else if (currentLevel === 4) {
@@ -861,12 +861,12 @@ const startSimulation = () => {
       const withinSectorLimit = maxSectorPercent <= ((winCond.maxSectorAllocation || 0.4) * 100);
       return meetsPortfolioTarget && withinSectorLimit;
     } else if (currentLevel === 8) {
-      // Bull market: Portfolio ≥ $11,500
+      // Bull market: Portfolio ≥ $11,200
       // Bear market: Portfolio ≥ $9,800
       if (marketMood === "bear") {
         return finalValue >= (winCond.bearPortfolioValue || 9800);
       } else {
-        return finalValue >= (winCond.bullPortfolioValue || 11500);
+        return finalValue >= (winCond.bullPortfolioValue || 11200);
       }
     } else if (currentLevel === 9) {
       // Max drawdown ≤ 12% AND final portfolio ≥ $10,500
@@ -874,12 +874,12 @@ const startSimulation = () => {
       const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 10500);
       return withinMaxDrawdown && meetsPortfolioTarget;
     } else if (currentLevel === 10) {
-      // Hold at least one stock ≥ 70% of level AND final portfolio ≥ $11,300
+      // Hold at least one stock ≥ 70% of level AND final portfolio ≥ $11,100
       const minHoldingPeriod = winCond.minHoldingPeriod || 0.7;
       const minHoldingDays = config.maxDays * minHoldingPeriod;
       const maxHoldingDays = Math.max(...Object.values(holdingPeriods), 0);
       const hasLongHolding = maxHoldingDays >= minHoldingDays;
-      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 11300);
+      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 11100);
       return hasLongHolding && meetsPortfolioTarget;
     } else if (currentLevel === 11) {
       // Portfolio ≥ $11,000 AND ETF underperformed your portfolio
