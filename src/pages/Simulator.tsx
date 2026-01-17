@@ -948,7 +948,6 @@ const startSimulation = () => {
           }
         }
       });
-      // Use original total allocated amount, not startingValue which can change after price movements
       const totalAllocatedForSectors = Object.values(allocations).reduce((sum, val) => sum + val, 0);
       const maxSectorPercent = totalAllocatedForSectors > 0 
         ? Math.max(...Object.values(sectorAllocations).map(amt => (amt / totalAllocatedForSectors) * 100), 0)

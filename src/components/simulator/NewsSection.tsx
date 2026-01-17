@@ -138,54 +138,54 @@ export function NewsSection({ news, currentDay, isPreview = false, stockPrices =
                   <p className="text-xs font-medium text-muted-foreground mb-2">Previous Days:</p>
                 )}
                 {(isPreview ? visibleNews : pastNews).map((item) => (
-                  <div
-                    key={item.id}
-                    className={`rounded-lg border p-3 transition-colors ${
-                      item.impact === "positive"
-                        ? "border-success/30 bg-success/5"
-                        : item.impact === "negative"
-                        ? "border-destructive/30 bg-destructive/5"
-                        : "border-border bg-muted/30"
-                    }`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <div
-                        className={`mt-0.5 rounded-full p-1 ${
-                          item.impact === "positive"
-                            ? "bg-success/20 text-success"
-                            : item.impact === "negative"
-                            ? "bg-destructive/20 text-destructive"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {item.impact === "positive" ? (
-                          <TrendingUp className="h-3 w-3" />
-                        ) : item.impact === "negative" ? (
-                          <TrendingDown className="h-3 w-3" />
-                        ) : (
-                          <Minus className="h-3 w-3" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground leading-snug">
-                          {item.headline}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {item.description}
-                        </p>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {item.affectedStocks.map((stock) => (
-                            <Badge key={stock} variant="secondary" className="text-xs">
-                              {stock}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        Day {item.day}
-                      </span>
-                    </div>
+            <div
+              key={item.id}
+              className={`rounded-lg border p-3 transition-colors ${
+                item.impact === "positive"
+                  ? "border-success/30 bg-success/5"
+                  : item.impact === "negative"
+                  ? "border-destructive/30 bg-destructive/5"
+                  : "border-border bg-muted/30"
+              }`}
+            >
+              <div className="flex items-start gap-2">
+                <div
+                  className={`mt-0.5 rounded-full p-1 ${
+                    item.impact === "positive"
+                      ? "bg-success/20 text-success"
+                      : item.impact === "negative"
+                      ? "bg-destructive/20 text-destructive"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {item.impact === "positive" ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : item.impact === "negative" ? (
+                    <TrendingDown className="h-3 w-3" />
+                  ) : (
+                    <Minus className="h-3 w-3" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground leading-snug">
+                    {item.headline}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {item.description}
+                  </p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {item.affectedStocks.map((stock) => (
+                      <Badge key={stock} variant="secondary" className="text-xs">
+                        {stock}
+                      </Badge>
+                    ))}
                   </div>
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  Day {item.day}
+                </span>
+              </div>
+            </div>
                 ))}
               </div>
             )}
