@@ -14,6 +14,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { PortfolioChart } from "@/components/simulator/PortfolioChart";
 import { NewsSection, NewsItem } from "@/components/simulator/NewsSection";
+import { SimulatorAI } from "@/components/simulator/SimulatorAI";
 
 // All available stocks
 const allCompanies = [
@@ -182,7 +183,7 @@ const levelConfig = {
     description: "Learn mechanics without stress",
     maxDays: 10,
     stocks: ["aapl", "tsla", "nvda"],
-    showNews: false,
+    showNews: true, // Enable news so users can see why prices move
     showETF: false,
     volatilityMultiplier: 0.3, // Very calm movements
     winConditions: {
@@ -200,7 +201,6 @@ const levelConfig = {
     volatilityMultiplier: 0.6,
     winConditions: {
       portfolioValue: 10200, // Portfolio ≥ $10,200
-      newsInfluencedTrade: true, // At least 1 trade influenced by news
     },
   },
   3: {
@@ -212,7 +212,7 @@ const levelConfig = {
     showETF: true,
     volatilityMultiplier: 0.8,
     winConditions: {
-      portfolioValue: 10600, // Final portfolio ≥ $10,600 (lowered from $10,800 for achievability with drawdown constraint)
+      portfolioValue: 10800, // Final portfolio ≥ $10,800
       maxDrawdown: 0.10, // Maximum drawdown ≤ 10%
     },
   },
@@ -230,120 +230,55 @@ const levelConfig = {
     },
   },
   5: {
-    name: "Constraints & Discipline",
-    description: "Survive under pressure",
-    maxDays: 25,
-    stocks: ["aapl", "tsla", "nvda", "msft", "googl", "amzn", "meta", "jpm", "v", "jnj", "wmt", "nflx", "amd"],
+    name: "Pressure & Regimes",
+    description: "Adapt under constraints",
+    maxDays: 30,
+    stocks: ["aapl", "tsla", "nvda", "msft", "googl", "amzn", "meta", "jpm", "v", "jnj", "wmt"],
     showNews: true,
     showETF: true,
     volatilityMultiplier: 1.2,
-    transactionFee: 0.01, // 1% transaction fee
-    tradeLimit: 3, // 3 trades per day
+    showMarketMood: true,
+    marketRegime: "random",
+    transactionFee: 0.01,
     winConditions: {
-      portfolioValue: 10200, // Portfolio ≥ $10,200 (2% gain - achievable after crash)
-      minPortfolioValue: 7500, // Never drop below $7,500 (allows 25% drawdown from crash)
+      bullPortfolioValue: 11000, // Bull: Portfolio ≥ $11,000
+      bearPortfolioValue: 9800, // Bear: Portfolio ≥ $9,800
+      minPortfolioValue: 7500, // Never drop below $7,500
+      maxStockAllocation: 0.40, // No single stock > 40% of portfolio
     },
   },
   6: {
-    name: "Timing Isn't Everything",
-    description: "Consistency over precision",
-    maxDays: 30,
-    stocks: ["aapl", "tsla", "nvda", "msft", "googl", "amzn", "meta", "jpm"],
-    showNews: true,
-    showETF: true,
-    volatilityMultiplier: 0.9,
-    showTimeline: true,
-    showBestTrade: true,
-    winConditions: {
-      avgDailyReturn: 0.0015, // Average daily return ≥ 0.15%
-      maxTrades: 15, // Trades ≤ 15
-    },
-  },
-  7: {
-    name: "Correlation Traps",
-    description: "True diversification",
-    maxDays: 30,
-    stocks: ["aapl", "tsla", "nvda", "msft", "googl", "amzn", "meta", "amd", "jpm", "v"],
+    name: "True Diversification",
+    description: "Beyond timing and correlation",
+    maxDays: 35,
+    stocks: ["aapl", "tsla", "nvda", "msft", "googl", "amzn", "meta", "amd", "jpm", "v", "wmt", "jnj", "nflx"],
     showNews: true,
     showETF: true,
     volatilityMultiplier: 1.0,
     showSectors: true,
     showCorrelation: true,
+    showTimeline: true,
     winConditions: {
-      portfolioValue: 11000, // Final portfolio ≥ $11,000
+      portfolioValue: 10800, // Portfolio ≥ $10,800
       maxSectorAllocation: 0.40, // No sector > 40%
     },
   },
-  8: {
-    name: "Market Regimes",
-    description: "Adapt to conditions",
-    maxDays: 30,
-    stocks: ["aapl", "tsla", "nvda", "msft", "googl", "amzn", "meta", "jpm", "v", "jnj", "wmt"],
-    showNews: true,
-    showETF: true,
-    volatilityMultiplier: 1.1,
-    showMarketMood: true,
-    marketRegime: "random", // Can be "bull", "bear", "sideways", or "random"
-    winConditions: {
-      bullPortfolioValue: 11200, // Bull market: Portfolio ≥ $11,200 (lowered from $11,500 for achievability)
-      bearPortfolioValue: 9800, // Bear market: Portfolio ≥ $9,800
-    },
-  },
-  9: {
-    name: "Drawdowns Hurt",
-    description: "Protect against big losses",
-    maxDays: 35,
-    stocks: ["aapl", "tsla", "nvda", "msft", "googl", "amzn", "meta", "jpm", "nflx", "amd"],
-    showNews: true,
-    showETF: true,
-    volatilityMultiplier: 1.3,
-    showDrawdown: true,
-    showPressure: true,
-    winConditions: {
-      maxDrawdown: 0.12, // Max drawdown ≤ 12%
-      portfolioValue: 10500, // Final portfolio ≥ $10,500
-    },
-  },
-  10: {
-    name: "Conviction vs Flexibility",
-    description: "Balance holding & adapting",
-    maxDays: 40,
-    stocks: ["aapl", "tsla", "nvda", "msft", "googl", "amzn", "meta", "jpm", "v", "jnj"],
-    showNews: true,
-    showETF: true,
-    volatilityMultiplier: 1.0,
-    showHoldings: true,
-    winConditions: {
-      minHoldingPeriod: 0.7, // Hold at least one stock ≥ 70% of level
-      portfolioValue: 11100, // Final portfolio ≥ $11,100 (lowered from $11,300 for achievability with holding constraint)
-    },
-  },
-  11: {
-    name: "False Safety",
-    description: "Recognize hidden underperformance",
-    maxDays: 40,
-    stocks: ["aapl", "tsla", "nvda", "msft", "googl", "amzn", "meta", "jpm", "v", "jnj", "wmt"],
-    showNews: true,
-    showETF: true,
-    volatilityMultiplier: 1.0,
-    mutedRisks: true,
-    winConditions: {
-      portfolioValue: 11000, // Portfolio ≥ $11,000
-      outperformETF: true, // ETF underperformed your portfolio
-    },
-  },
-  12: {
-    name: "The Long Game",
-    description: "Let compounding work",
-    maxDays: 50,
+  7: {
+    name: "Master Level",
+    description: "Advanced risk & strategy",
+    maxDays: 45,
     stocks: ["aapl", "tsla", "nvda", "msft", "googl", "amzn", "meta", "jpm", "v", "jnj", "wmt", "nflx", "amd"],
     showNews: true,
     showETF: true,
-    volatilityMultiplier: 0.8,
+    volatilityMultiplier: 1.1,
+    showDrawdown: true,
+    showHoldings: true,
+    mutedRisks: true,
     emphasizeCompounding: true,
     winConditions: {
-      portfolioValue: 11700, // Portfolio ≥ $11,700 (lowered from $12,000 for achievability)
-      outperformETFBy: 0.02, // Outperform ETF by ≥ 2%
+      portfolioValue: 11200, // Portfolio ≥ $11,200
+      maxDrawdown: 0.15, // Max drawdown ≤ 15%
+      outperformETFBy: 0.015, // Outperform ETF by ≥ 1.5%
     },
   },
 };
@@ -406,55 +341,9 @@ const newsScenarios: Record<number, NewsItem[][]> = {
       { id: "n5", day: 20, headline: "Sector risk becomes apparent", description: "Diversification challenge emerges.", impact: "neutral", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta", "Nvidia"] },
     ],
   ],
-  8: [
-    [
-      { id: "n1", day: 1, headline: "Bull market begins", description: "Strong upward trend starts.", impact: "positive", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta", "Tesla", "Nvidia"] },
-      { id: "n2", day: 7, headline: "Market shifts to sideways", description: "Gains stall, trading range forms.", impact: "neutral", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta", "JPMorgan Chase", "Visa"] },
-      { id: "n3", day: 14, headline: "Bear market emerges", description: "Downward pressure increases.", impact: "negative", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta", "Tesla", "Nvidia", "JPMorgan Chase"] },
-      { id: "n4", day: 20, headline: "Regime change continues", description: "Market mood shifts again.", impact: "neutral", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon"] },
-      { id: "n5", day: 25, headline: "Strategy must adapt", description: "Previous approach stops working.", impact: "neutral", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta", "JPMorgan Chase", "Visa"] },
-    ],
-  ],
-  9: [
-    [
-      { id: "n1", day: 2, headline: "Volatility spike hits markets", description: "Sharp price swings begin.", impact: "negative", affectedStocks: ["Tesla", "Nvidia", "Meta", "Netflix", "AMD"] },
-      { id: "n2", day: 5, headline: "Market drops 8% in single day", description: "Portfolio drawdown deepens.", impact: "negative", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta", "Tesla", "Nvidia"] },
-      { id: "n3", day: 9, headline: "Recovery attempt begins", description: "Prices start to recover slowly.", impact: "positive", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon"] },
-      { id: "n4", day: 13, headline: "Another sharp drop occurs", description: "Drawdowns compound.", impact: "negative", affectedStocks: ["Tesla", "Nvidia", "Meta", "Netflix", "AMD"] },
-      { id: "n5", day: 18, headline: "Volatility continues", description: "Risk management tested.", impact: "neutral", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta", "JPMorgan Chase"] },
-    ],
-  ],
-  10: [
-    [
-      { id: "n1", day: 1, headline: "Tech stocks show steady trend", description: "Slow but reliable gains.", impact: "positive", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta"] },
-      { id: "n2", day: 4, headline: "Volatile stocks tempt traders", description: "Noisy but exciting.", impact: "neutral", affectedStocks: ["Tesla", "Nvidia"] },
-      { id: "n3", day: 8, headline: "Long-term positions pay off", description: "Holding rewards patience.", impact: "positive", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon"] },
-      { id: "n4", day: 14, headline: "Conviction tested by volatility", description: "When to hold vs when to change.", impact: "neutral", affectedStocks: ["Tesla", "Nvidia", "Meta"] },
-      { id: "n5", day: 20, headline: "Flexibility vs conviction", description: "Balance between holding and adapting.", impact: "neutral", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta", "JPMorgan Chase", "Visa"] },
-    ],
-  ],
-  11: [
-    [
-      { id: "n1", day: 1, headline: "ETF appears stable", description: "Safe option looks attractive.", impact: "neutral", affectedStocks: [] },
-      { id: "n2", day: 5, headline: "ETF slowly underperforms", description: "Hidden risk accumulates.", impact: "negative", affectedStocks: [] },
-      { id: "n3", day: 10, headline: "Individual stocks outperform", description: "Active choice may be better.", impact: "positive", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta"] },
-      { id: "n4", day: 16, headline: "ETF safety questioned", description: "Optimal vs safe choice.", impact: "neutral", affectedStocks: [] },
-      { id: "n5", day: 22, headline: "Risk recognition matters", description: "Understanding trade-offs.", impact: "neutral", affectedStocks: [] },
-    ],
-  ],
-  12: [
-    [
-      { id: "n1", day: 3, headline: "Early gains compound slowly", description: "Time builds wealth.", impact: "positive", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon"] },
-      { id: "n2", day: 8, headline: "Compounding accelerates", description: "Small edges grow over time.", impact: "positive", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta", "JPMorgan Chase", "Visa"] },
-      { id: "n3", day: 15, headline: "Frequent trading erodes gains", description: "Transaction costs add up.", impact: "negative", affectedStocks: ["Tesla", "Nvidia", "Meta", "Netflix"] },
-      { id: "n4", day: 25, headline: "Long-term strategy pays off", description: "Time is the strongest force.", impact: "positive", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta", "JPMorgan Chase", "Visa", "Johnson & Johnson"] },
-      { id: "n5", day: 35, headline: "Compounding beats cleverness", description: "Patience rewards investors.", impact: "positive", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta", "JPMorgan Chase", "Visa"] },
-      { id: "n6", day: 42, headline: "The long game wins", description: "Extended timeline shows power of compounding.", impact: "positive", affectedStocks: ["Apple", "Microsoft", "Alphabet", "Amazon", "Meta", "JPMorgan Chase", "Visa", "Johnson & Johnson", "Walmart"] },
-    ],
-  ],
 };
 
-type Level = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+type Level = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 const Simulator = () => {
   // Level management
@@ -471,6 +360,7 @@ const Simulator = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [portfolioHistory, setPortfolioHistory] = useState<{ day: number; value: number }[]>([]);
   const [stockPrices, setStockPrices] = useState<Record<string, number>>({});
+  const [previousPrices, setPreviousPrices] = useState<Record<string, number>>({});
   const [tradeCount, setTradeCount] = useState(0);
   const [dailyTradeCount, setDailyTradeCount] = useState(0);
   const [maxDrawdown, setMaxDrawdown] = useState(0);
@@ -495,7 +385,49 @@ const Simulator = () => {
     setStockPrices(Object.fromEntries(levelCompanies.map(c => [c.id, c.currentValue])));
   }, [currentLevel]);
 
-  // Get news for current level
+  // Generate daily news dynamically
+  const generateDailyNews = (day: number): NewsItem | null => {
+    if (!config.showNews || day === 0) return null;
+    
+    const newsTemplates: {
+      headline: string;
+      description: string;
+      impact: "positive" | "negative" | "neutral";
+      affectedStocks: string[];
+    }[] = [
+      // Positive news
+      { headline: "Strong earnings beat expectations", description: "Better-than-expected quarterly results.", impact: "positive", affectedStocks: levelCompanies.slice(0, Math.min(3, levelCompanies.length)).map(c => c.name) },
+      { headline: "Product launch drives investor interest", description: "New offering generates excitement.", impact: "positive", affectedStocks: levelCompanies.filter(c => c.sector === "tech").slice(0, 2).map(c => c.name) },
+      { headline: "Market rally continues", description: "Broad gains across major sectors.", impact: "positive", affectedStocks: levelCompanies.slice(0, Math.min(5, levelCompanies.length)).map(c => c.name) },
+      { headline: "Positive analyst upgrade", description: "Institutional investors increase positions.", impact: "positive", affectedStocks: levelCompanies.slice(0, Math.min(2, levelCompanies.length)).map(c => c.name) },
+      
+      // Negative news
+      { headline: "Earnings miss expectations", description: "Weaker-than-expected quarterly results.", impact: "negative", affectedStocks: levelCompanies.slice(0, Math.min(3, levelCompanies.length)).map(c => c.name) },
+      { headline: "Regulatory concerns weigh on markets", description: "Uncertainty creates selling pressure.", impact: "negative", affectedStocks: levelCompanies.filter(c => c.sector === "tech" || c.sector === "finance").slice(0, 3).map(c => c.name) },
+      { headline: "Market correction deepens", description: "Selling pressure intensifies across sectors.", impact: "negative", affectedStocks: levelCompanies.slice(0, Math.min(5, levelCompanies.length)).map(c => c.name) },
+      { headline: "Economic data disappoints", description: "Concerns about growth prospects.", impact: "negative", affectedStocks: levelCompanies.slice(0, Math.min(4, levelCompanies.length)).map(c => c.name) },
+      
+      // Neutral news
+      { headline: "Markets trade in narrow range", description: "Mixed signals keep prices stable.", impact: "neutral", affectedStocks: levelCompanies.slice(0, Math.min(3, levelCompanies.length)).map(c => c.name) },
+      { headline: "Sector rotation continues", description: "Investors shift allocations between industries.", impact: "neutral", affectedStocks: levelCompanies.slice(0, Math.min(4, levelCompanies.length)).map(c => c.name) },
+      { headline: "Low volume trading session", description: "Markets move quietly on limited activity.", impact: "neutral", affectedStocks: levelCompanies.slice(0, Math.min(2, levelCompanies.length)).map(c => c.name) },
+    ];
+    
+    // Randomly select a news template
+    const template = newsTemplates[Math.floor(Math.random() * newsTemplates.length)];
+    if (!template) return null;
+    
+    return {
+      id: `news-day-${day}`,
+      day: day,
+      headline: template.headline,
+      description: template.description,
+      impact: template.impact,
+      affectedStocks: template.affectedStocks.length > 0 ? template.affectedStocks : [],
+    };
+  };
+
+  // Get news for current level (legacy - now used only for initial setup)
   const getNewsForLevel = () => {
     if (!levelConfig[currentLevel].showNews || !newsScenarios[currentLevel]) {
       return [];
@@ -504,47 +436,148 @@ const Simulator = () => {
     return scenarios[Math.floor(Math.random() * scenarios.length)];
   };
 
-  const totalAllocated = Object.values(allocations).reduce((sum, val) => sum + val, 0) + etfAllocation;
-  const remainingCash = cash - totalAllocated;
+  // Calculate total allocated - sum all allocations and ETF, rounding to avoid floating point issues
+  const allocationsSum = Object.values(allocations).reduce((sum, val) => sum + (val || 0), 0);
+  const totalAllocated = Math.round((allocationsSum + (etfAllocation || 0)) * 100) / 100;
+  const remainingCash = Math.round((cash - totalAllocated) * 100) / 100;
   const config = levelConfig[currentLevel];
 
   const calculatePortfolioValue = (prices: Record<string, number>) => {
     let total = 0;
     // Only count stocks you actually own (amount > 0)
+    // Use a stricter threshold to avoid floating point errors
     Object.entries(allocations).forEach(([id, amount]) => {
-      if (amount > 0 && amount > 0.01) { // Strict check: must have meaningful allocation
+      if (amount > 0.01) { // Use 0.01 threshold to avoid rounding issues
         const company = levelCompanies.find(c => c.id === id);
-        if (company && prices[id] && company.currentValue > 0) {
+        if (company && prices[id] && prices[id] > 0 && company.currentValue > 0) {
         const priceChange = prices[id] / company.currentValue;
         total += amount * priceChange;
         }
       }
     });
     // ETF only counts if you actually allocated to it
-    if (etfAllocation > 0 && etfAllocation > 0.01 && config.showETF) {
-      const avgChange = levelCompanies.reduce((sum, company) => {
+    // Note: ETF tracks the average of ALL stocks in the level, including ones you didn't invest in individually
+    // For Level 7, ETF goes down because it includes tech stocks
+    if (etfAllocation > 1 && config.showETF) { // Stricter check: must have at least $1 in ETF
+      let avgChange = levelCompanies.reduce((sum, company) => {
         if (prices[company.id] && company.currentValue > 0) {
           return sum + (prices[company.id] / company.currentValue);
         }
         return sum;
       }, 0) / levelCompanies.length;
+      
+      // For Level 7, ETF should go down because it includes tech stocks
+      if (currentLevel === 7) {
+        // ETF tracks all stocks, but tech stocks dominate, so ETF goes down
+        avgChange = avgChange * 0.98 - 0.01; // ETF loses ~2-3% per day on Level 7
+      }
+      
       total += etfAllocation * avgChange;
     }
     return Math.round(total);
   };
 
   const handleAllocationChange = (companyId: string, value: number[]) => {
-    const newValue = value[0];
+    // Round to nearest dollar to avoid floating point precision issues
+    const newValue = Math.round(value[0] || 0);
+    const oldValue = allocations[companyId] || 0;
+    
+    if (simulationStarted) {
+      // During simulation: calculate cost at CURRENT market prices
+      const company = levelCompanies.find(c => c.id === companyId);
+      if (company && stockPrices[companyId] && company.currentValue > 0) {
+        // Calculate the difference in allocation value at current prices
+        const allocationDifference = newValue - oldValue;
+        // Cost at current price = (allocation difference) * (current price / original price)
+        const priceRatio = stockPrices[companyId] / company.currentValue;
+        
+        // If buying (increasing allocation), need cash
+        // If selling (decreasing allocation), get cash back
+        if (allocationDifference > 0) {
+          // Buying: calculate cost at current market price
+          const costAtCurrentPrice = allocationDifference * priceRatio;
+          // Check if we have enough cash
+          if (costAtCurrentPrice > cash + 0.01) {
+            // Not enough cash - don't update
+            return;
+          }
+          
+          // For Level 5: Check max stock allocation (no single stock > 40% of total portfolio value)
+          // During simulation, use current portfolio value (cash + portfolio value) as the base
+          if (currentLevel === 5) {
+            const currentPortfolioValue = calculatePortfolioValue(stockPrices);
+            const totalPortfolioValue = cash + currentPortfolioValue;
+            const maxSingleStockAllocation = totalPortfolioValue * 0.40; // 40% of total portfolio
+            
+            // Calculate what the new allocation value would be at current prices
+            const newAllocationValue = newValue * priceRatio;
+            
+            if (newAllocationValue > maxSingleStockAllocation + 0.01) {
+              return; // Don't allow allocation if it exceeds 40% of total portfolio
+            }
+          }
+          
+          // Subtract cash when buying
+          setCash(prev => Math.max(0, prev - costAtCurrentPrice));
+          
+          if (Math.abs(allocationDifference) > 0.01) {
+            setTradeCount(prev => prev + 1);
+            setDailyTradeCount(prev => prev + 1);
+          }
+        } else if (allocationDifference < 0) {
+          // Selling: calculate cash back at current market price
+          // oldValue is the original allocation amount, we need to calculate its current value
+          // The current value of the position = oldValue * priceRatio
+          // We're selling (oldValue - newValue) of the original allocation
+          const soldOriginalAmount = Math.abs(allocationDifference); // Original $ amount being sold
+          const currentValueOfSoldAmount = soldOriginalAmount * priceRatio; // Current value at market price
+          // Add cash back when selling (round to avoid floating point issues)
+          setCash(prev => {
+            const newCash = prev + currentValueOfSoldAmount;
+            return Math.round(newCash * 100) / 100;
+          });
+          
+          if (Math.abs(allocationDifference) > 0.01) {
+            setTradeCount(prev => prev + 1);
+            setDailyTradeCount(prev => prev + 1);
+          }
+        } else {
+          // No change - don't update anything
+          return;
+        }
+        
+        // Only update allocations if we successfully processed the transaction
+        setAllocations(prev => ({ ...prev, [companyId]: newValue }));
+        return; // Exit early to avoid duplicate allocation update
+      } else {
+        // Company/price check failed - don't update
+        return;
+      }
+    } else {
+      // Before simulation: use simple cash check
     const otherAllocations = Object.entries(allocations)
       .filter(([id]) => id !== companyId)
-      .reduce((sum, [, val]) => sum + val, 0) + etfAllocation;
-    
-    if (newValue + otherAllocations <= cash) {
-      const oldValue = allocations[companyId] || 0;
-      if (simulationStarted && oldValue !== newValue) {
+        .reduce((sum, [, val]) => sum + (val || 0), 0) + (etfAllocation || 0);
+      
+      // Check if new total allocation would exceed cash
+      if (newValue + otherAllocations > cash + 0.01) {
+        return;
+      }
+      
+      // For Level 5: Check max stock allocation (no single stock > 40% of total cash/portfolio)
+      // Use total cash (10000) as the base, not current allocations
+      if (currentLevel === 5) {
+        const maxSingleStockAllocation = 10000 * 0.40; // 40% of starting cash
+        if (newValue > maxSingleStockAllocation + 0.01) {
+          return; // Don't allow allocation if it exceeds 40% of total cash
+        }
+      }
+      
+      if (Math.abs(oldValue - newValue) > 0.01) {
         setTradeCount(prev => prev + 1);
         setDailyTradeCount(prev => prev + 1);
       }
+    }
       
       // Track news-influenced trades for level 2
       // Counts if you have a position in a stock with POSITIVE news (even if allocated before news)
@@ -587,28 +620,69 @@ const Simulator = () => {
         }
       }
       
+      // Store rounded value to avoid precision issues (only for pre-simulation)
       setAllocations(prev => ({ ...prev, [companyId]: newValue }));
-    }
   };
 
   const handleEtfChange = (value: number[]) => {
-    const newValue = value[0];
-    const companyTotal = Object.values(allocations).reduce((sum, val) => sum + val, 0);
+    // Round to nearest dollar to avoid floating point precision issues
+    const newValue = Math.round(value[0] || 0);
+    const oldValue = etfAllocation || 0;
     
-    if (newValue + companyTotal <= cash) {
-      const oldValue = etfAllocation;
-      if (simulationStarted && oldValue !== newValue) {
+    if (simulationStarted) {
+      // During simulation: ETF tracks average of all stocks, so use average price ratio
+      const avgPriceRatio = levelCompanies.reduce((sum, company) => {
+        if (stockPrices[company.id] && company.currentValue > 0) {
+          return sum + (stockPrices[company.id] / company.currentValue);
+        }
+        return sum;
+      }, 0) / levelCompanies.length;
+      
+      const allocationDifference = newValue - oldValue;
+      const costAtCurrentPrice = allocationDifference * avgPriceRatio;
+      
+      // If buying (increasing allocation), need cash
+      // If selling (decreasing allocation), get cash back
+      if (costAtCurrentPrice > 0) {
+        // Buying: check if we have enough cash
+        if (costAtCurrentPrice > cash + 0.01) {
+          // Not enough cash - don't update
+          return;
+        }
+        // Subtract cash when buying
+        setCash(prev => Math.max(0, prev - costAtCurrentPrice));
+      } else if (costAtCurrentPrice < 0) {
+        // Selling: add cash back
+        setCash(prev => prev + Math.abs(costAtCurrentPrice));
+      }
+      
+      if (Math.abs(oldValue - newValue) > 0.01) {
         setTradeCount(prev => prev + 1);
         setDailyTradeCount(prev => prev + 1);
       }
       setEtfAllocation(newValue);
+    } else {
+      // Before simulation: use simple cash check
+      const companyTotal = Object.values(allocations).reduce((sum, val) => sum + (val || 0), 0);
+      
+      if (newValue + companyTotal <= cash + 0.01) {
+        if (Math.abs(oldValue - newValue) > 0.01) {
+          setTradeCount(prev => prev + 1);
+          setDailyTradeCount(prev => prev + 1);
+        }
+        setEtfAllocation(newValue);
+      }
     }
   };
 
 const startSimulation = () => {
     if (totalAllocated > 0) {
-      const levelNews = getNewsForLevel();
-      setNews(levelNews);
+      // Calculate cash: starting cash (10000) minus what was allocated
+      // This ensures cash reflects only uninvested money
+      const remainingCash = 10000 - totalAllocated;
+      
+      // Start with empty news - will be generated daily
+      setNews([]);
       setSimulationStarted(true);
       setCurrentDay(0);
       setTradeCount(0);
@@ -619,38 +693,14 @@ const startSimulation = () => {
       setPortfolioPeak(totalAllocated);
       setNewsInfluencedTrades(0);
       setMinPortfolioValue(totalAllocated);
+      // Set cash correctly at simulation start
+      setCash(remainingCash);
       
-      // For Level 2: Check if user has allocated to stocks with positive news on day 1 or day 2
-      if (currentLevel === 2) {
-        const day1News = levelNews.find(n => n.day === 1 && n.impact === "positive");
-        const day2News = levelNews.find(n => n.day === 2 && n.impact === "positive");
-        
-        let newsInfluencedCount = 0;
-        
-        // Check if user has invested in stocks with positive news on day 1 or 2
-        levelCompanies.forEach(company => {
-          const allocation = allocations[company.id] || 0;
-          if (allocation > 0) {
-            // Check day 1 news
-            if (day1News && day1News.affectedStocks.includes(company.name)) {
-              newsInfluencedCount = 1;
-              console.log(`✅ News-influenced trade detected at start! Investing in ${company.name} with POSITIVE news on day 1.`);
-            }
-            // Check day 2 news (if not already counted)
-            if (newsInfluencedCount === 0 && day2News && day2News.affectedStocks.includes(company.name)) {
-              newsInfluencedCount = 1;
-              console.log(`✅ News-influenced trade detected at start! Investing in ${company.name} with POSITIVE news on day 2.`);
-            }
-          }
-        });
-        
-        if (newsInfluencedCount > 0) {
-          setNewsInfluencedTrades(newsInfluencedCount);
-        }
-      }
+      // For Level 2: News-influenced trades are now checked dynamically during simulation
+      // News is generated daily, so we can't check at start anymore
       
-      // Initialize market mood for level 8
-      if (currentLevel === 8) {
+      // Initialize market mood for level 5 (Pressure & Regimes)
+      if (currentLevel === 5) {
         const moods: ("bull" | "bear" | "sideways")[] = ["bull", "bear", "sideways"];
         const randomMood = moods[Math.floor(Math.random() * moods.length)];
         setMarketMood(randomMood);
@@ -674,18 +724,22 @@ const startSimulation = () => {
 
   const nextDay = () => {
     if (currentDay >= config.maxDays) return;
-    
-    // Check trade limit for level 5
-    if (currentLevel === 5 && dailyTradeCount >= (config.tradeLimit || 999)) {
-      return; // Cannot trade more today
-    }
 
     const nextDayNum = currentDay + 1;
     setCurrentDay(nextDayNum);
     setDailyTradeCount(0); // Reset daily trade count
 
-    // Update stock prices
-    const todayNews = news.find(n => n.day === nextDayNum);
+    // Generate news for this day BEFORE updating prices
+    let todayNews: NewsItem | null = null;
+    if (config.showNews) {
+      todayNews = generateDailyNews(nextDayNum);
+      if (todayNews) {
+        // Add news immediately so it's available for price calculations and display
+        setNews(prev => [...prev, todayNews!]);
+      }
+    }
+
+    // Update stock prices using today's news
       const newPrices = { ...stockPrices };
 
     levelCompanies.forEach(company => {
@@ -699,6 +753,20 @@ const startSimulation = () => {
         baseChange += 1.5 + Math.random() * 1; // Add ~1.5-2.5 upward bias per day
       }
       
+      // For level 5, market mood affects base movement
+      if (currentLevel === 5) {
+        if (marketMood === "bear") {
+          // In bear market, strong downward bias - stocks should go down
+          baseChange -= 2.5 + Math.random() * 1.5; // -2.5 to -4.0 downward bias per day
+        } else if (marketMood === "bull") {
+          // In bull market, upward bias
+          baseChange += 2.0 + Math.random() * 1.0; // +2.0 to +3.0 upward bias per day
+        }
+        // Sideways has no additional bias (just normal volatility)
+      }
+      
+      // For level 6, tech stocks and ETF should go down significantly
+      // Non-tech stocks get strong upward bias - only way to beat the level
         let newsImpact = 0;
 
         if (todayNews && todayNews.affectedStocks.includes(company.name)) {
@@ -708,25 +776,38 @@ const startSimulation = () => {
           newsImpact = -(8 + Math.random() * 7);
         }
         // Neutral news has no impact
-        }
-
-        newPrices[company.id] = Math.max(10, newPrices[company.id] + baseChange + newsImpact);
-      });
-
-      // Market mood affects price movement for level 8
-      if (currentLevel === 8) {
-        levelCompanies.forEach(company => {
-          if (marketMood === "bear") {
-            // In bear market, add downward bias
-            newPrices[company.id] = newPrices[company.id] * (0.97 + Math.random() * 0.02);
-          } else if (marketMood === "bull") {
-            // In bull market, add upward bias
-            newPrices[company.id] = newPrices[company.id] * (1.01 + Math.random() * 0.02);
+      }
+      
+      // For level 5, reduce positive news impact in bear market
+      if (currentLevel === 5 && marketMood === "bear" && newsImpact > 0) {
+        newsImpact = newsImpact * 0.3; // Positive news has much less impact in bear market
+      }
+      
+      if (currentLevel === 6) {
+        if (company.sector === "tech") {
+          // Tech stocks have very strong downward bias - investing in them will lose money
+          // Even positive news can't overcome the strong downward trend
+          baseChange -= 4.0 + Math.random() * 2.0; // -4.0 to -6.0 downward bias per day
+          // Severely reduce the impact of positive news for tech stocks on Level 7
+          if (newsImpact > 0) {
+            newsImpact = newsImpact * 0.2 - 2; // Positive news gives only 20% impact and then subtracts 2 more
           }
-          // Sideways has no additional bias
-        });
+        } else {
+          // Non-tech stocks (finance, retail, healthcare, entertainment) get moderate upward bias
+          // This is the only way to reach $10,800+ and beat the level, but it should be challenging
+          baseChange += 1.0 + Math.random() * 0.5; // +1.0 to +1.5 upward bias per day (reduced from 2.5-3.5)
+        }
       }
 
+      const newPrice = newPrices[company.id] + baseChange + newsImpact;
+        // Ensure price never goes below 10% of original value to prevent zero portfolio issues
+        // This prevents catastrophic losses while still allowing realistic price movements
+        const minPrice = Math.max(1, company.currentValue * 0.1);
+        newPrices[company.id] = Math.max(minPrice, newPrice);
+      });
+
+      // Store previous prices before updating
+      setPreviousPrices(stockPrices);
       setStockPrices(newPrices);
       const newValue = calculatePortfolioValue(newPrices);
     
@@ -735,8 +816,8 @@ const startSimulation = () => {
       setMinPortfolioValue(prev => Math.min(prev, newValue));
     }
     
-    // Track max drawdown for levels 3, 9
-    if (currentLevel === 3 || currentLevel === 9) {
+    // Track max drawdown for levels 3, 7
+    if (currentLevel === 3 || currentLevel === 7) {
       const currentPeak = Math.max(...portfolioHistory.map(p => p.value), portfolioPeak, totalAllocated);
       if (newValue > currentPeak) {
         setPortfolioPeak(newValue);
@@ -747,8 +828,8 @@ const startSimulation = () => {
       }
     }
     
-    // Update holding periods for level 10
-    if (currentLevel === 10 && simulationStarted) {
+    // Update holding periods for level 7
+    if (currentLevel === 7 && simulationStarted) {
       setHoldingPeriods(prev => {
         const updated = { ...prev };
         Object.keys(allocations).forEach(id => {
@@ -797,26 +878,12 @@ const startSimulation = () => {
         return true;
       }
     } else if (currentLevel === 2) {
-      // Portfolio ≥ $10,200 AND at least 1 trade influenced by news
+      // Portfolio ≥ $10,200
       const targetValue = winCond.portfolioValue || 10200;
-      const meetsTarget = finalValue >= targetValue;
-      const hasNewsTrade = newsInfluencedTrades >= 1;
-      
-      // Debug logging
-      console.log(`Level 2 Win Check:`);
-      console.log(`  - currentDay: ${currentDay}, maxDays: ${config.maxDays}`);
-      console.log(`  - finalValue: ${finalValue}, target: ${targetValue}, meetsTarget: ${meetsTarget}`);
-      console.log(`  - newsInfluencedTrades: ${newsInfluencedTrades}, hasNewsTrade: ${hasNewsTrade}`);
-      console.log(`  - portfolioHistory length: ${portfolioHistory.length}`);
-      console.log(`  - Will pass: ${meetsTarget && hasNewsTrade}`);
-      
-      if (meetsTarget && hasNewsTrade) {
-        return true;
-      }
-      return false;
+      return finalValue >= targetValue;
     } else if (currentLevel === 3) {
-      // Final portfolio ≥ $10,600 AND maximum drawdown ≤ 10%
-      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 10600);
+      // Final portfolio ≥ $10,800 AND maximum drawdown ≤ 10%
+      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 10800);
       const withinMaxDrawdown = maxDrawdown <= (winCond.maxDrawdown || 0.10);
       return meetsPortfolioTarget && withinMaxDrawdown;
     } else if (currentLevel === 4) {
@@ -830,24 +897,48 @@ const startSimulation = () => {
       const withinTradeLimit = tradeCount <= (winCond.maxTrades || 10);
       return portfolioMeetsETF && withinTradeLimit;
     } else if (currentLevel === 5) {
-      // Portfolio ≥ $10,200 AND never drop below $7,500
-      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 10200);
-      const neverDroppedBelow = minPortfolioValue >= (winCond.minPortfolioValue || 7500);
-      return meetsPortfolioTarget && neverDroppedBelow;
-    } else if (currentLevel === 6) {
-      // Average daily return > threshold AND fewer than max trades
-      const avgDailyReturn = portfolioHistory.length > 1 
-        ? portfolioHistory.slice(1).reduce((sum, entry, idx) => {
-            const prevValue = portfolioHistory[idx]?.value || startingValue;
-            const dailyReturn = prevValue > 0 ? (entry.value - prevValue) / prevValue : 0;
-            return sum + dailyReturn;
-          }, 0) / (portfolioHistory.length - 1)
+      // Bull market: Portfolio ≥ $11,000 OR Bear market: Portfolio ≥ $9,800
+      // AND never drop below $7,500
+      // AND no single stock > 40% of portfolio
+      const meetsMinValue = minPortfolioValue >= (winCond.minPortfolioValue || 7500);
+      const portfolioTarget = marketMood === "bear" 
+        ? (winCond.bearPortfolioValue || 9800)
+        : (winCond.bullPortfolioValue || 11000);
+      const meetsPortfolioTarget = finalValue >= portfolioTarget;
+      
+      // Check max stock allocation: no single stock > 40% of total portfolio value
+      // Calculate each stock's current value and check percentage
+      const stockCurrentValues: Record<string, number> = {};
+      let totalPortfolioValueCheck = cash;
+      Object.entries(allocations).forEach(([id, originalAmount]) => {
+        if (originalAmount > 0 && stockPrices[id] && levelCompanies.find(c => c.id === id)?.currentValue) {
+          const company = levelCompanies.find(c => c.id === id)!;
+          const priceRatio = stockPrices[id] / company.currentValue;
+          stockCurrentValues[id] = originalAmount * priceRatio;
+          totalPortfolioValueCheck += stockCurrentValues[id];
+        }
+      });
+      
+      // Also add ETF value
+      if (etfAllocation > 0) {
+        const avgReturn = levelCompanies.reduce((sum, company) => {
+          if (stockPrices[company.id] && company.currentValue > 0) {
+            return sum + (stockPrices[company.id] / company.currentValue - 1);
+          }
+          return sum;
+        }, 0) / levelCompanies.length;
+        totalPortfolioValueCheck += etfAllocation * (1 + avgReturn);
+      }
+      
+      const maxStockPercent = totalPortfolioValueCheck > 0
+        ? Math.max(...Object.values(stockCurrentValues).map(val => (val / totalPortfolioValueCheck) * 100), 0)
         : 0;
-      const withinTradeLimit = tradeCount < (winCond.maxTrades || 999);
-      return avgDailyReturn >= (winCond.avgDailyReturn || 0) && withinTradeLimit;
-    } else if (currentLevel === 7) {
-      // Final portfolio ≥ $11,000 AND no sector > 40% allocation
-      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 11000);
+      const withinStockAllocationLimit = maxStockPercent <= ((winCond.maxStockAllocation || 0.40) * 100);
+      
+      return meetsPortfolioTarget && meetsMinValue && withinStockAllocationLimit;
+    } else if (currentLevel === 6) {
+      // Final portfolio ≥ $10,800 AND no sector > 40% allocation
+      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 10800);
       const sectorAllocations: Record<string, number> = {};
       Object.entries(allocations).forEach(([id, amount]) => {
         if (amount > 0) {
@@ -857,51 +948,25 @@ const startSimulation = () => {
           }
         }
       });
-      const maxSectorPercent = Math.max(...Object.values(sectorAllocations).map(amt => (amt / startingValue) * 100), 0);
-      const withinSectorLimit = maxSectorPercent <= ((winCond.maxSectorAllocation || 0.4) * 100);
+      // Use original total allocated amount, not startingValue which can change after price movements
+      const totalAllocatedForSectors = Object.values(allocations).reduce((sum, val) => sum + val, 0);
+      const maxSectorPercent = totalAllocatedForSectors > 0 
+        ? Math.max(...Object.values(sectorAllocations).map(amt => (amt / totalAllocatedForSectors) * 100), 0)
+        : 0;
+      const withinSectorLimit = maxSectorPercent <= ((winCond.maxSectorAllocation || 0.40) * 100);
       return meetsPortfolioTarget && withinSectorLimit;
-    } else if (currentLevel === 8) {
-      // Bull market: Portfolio ≥ $11,200
-      // Bear market: Portfolio ≥ $9,800
-      if (marketMood === "bear") {
-        return finalValue >= (winCond.bearPortfolioValue || 9800);
-      } else {
-        return finalValue >= (winCond.bullPortfolioValue || 11200);
-      }
-    } else if (currentLevel === 9) {
-      // Max drawdown ≤ 12% AND final portfolio ≥ $10,500
-      const withinMaxDrawdown = maxDrawdown <= (winCond.maxDrawdown || 0.12);
-      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 10500);
-      return withinMaxDrawdown && meetsPortfolioTarget;
-    } else if (currentLevel === 10) {
-      // Hold at least one stock ≥ 70% of level AND final portfolio ≥ $11,100
-      const minHoldingPeriod = winCond.minHoldingPeriod || 0.7;
-      const minHoldingDays = config.maxDays * minHoldingPeriod;
-      const maxHoldingDays = Math.max(...Object.values(holdingPeriods), 0);
-      const hasLongHolding = maxHoldingDays >= minHoldingDays;
-      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 11100);
-      return hasLongHolding && meetsPortfolioTarget;
-    } else if (currentLevel === 11) {
-      // Portfolio ≥ $11,000 AND ETF underperformed your portfolio
-      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 11000);
-      const etfReturn = levelCompanies.reduce((sum, company) => {
-        const returnPercent = (stockPrices[company.id] - company.currentValue) / company.currentValue;
-        return sum + returnPercent;
-      }, 0) / levelCompanies.length;
-      const portfolioReturn = (finalValue - startingValue) / startingValue;
-      const etfUnderperformed = portfolioReturn > etfReturn;
-      return meetsPortfolioTarget && etfUnderperformed;
-    } else if (currentLevel === 12) {
-      // Portfolio ≥ $12,000 AND outperform ETF by ≥ 2%
-      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 12000);
+    } else if (currentLevel === 7) {
+      // Portfolio ≥ $11,200 AND max drawdown ≤ 15% AND outperform ETF by ≥ 1.5%
+      const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 11200);
+      const withinMaxDrawdown = maxDrawdown <= (winCond.maxDrawdown || 0.15);
       const etfReturn = levelCompanies.reduce((sum, company) => {
         const returnPercent = (stockPrices[company.id] - company.currentValue) / company.currentValue;
         return sum + returnPercent;
       }, 0) / levelCompanies.length;
       const portfolioReturn = (finalValue - startingValue) / startingValue;
       const outperformsBy = portfolioReturn - etfReturn;
-      const beatsETFByEnough = outperformsBy >= (winCond.outperformETFBy || 0.02);
-      return meetsPortfolioTarget && beatsETFByEnough;
+      const beatsETFByEnough = outperformsBy >= (winCond.outperformETFBy || 0.015);
+      return meetsPortfolioTarget && withinMaxDrawdown && beatsETFByEnough;
     }
 
     return false;
@@ -919,7 +984,9 @@ const startSimulation = () => {
     setMarketMood("bull");
     setHoldingPeriods({});
     setNewsInfluencedTrades(0);
-    setMinPortfolioValue(cash);
+    setMinPortfolioValue(10000);
+    // Reset cash back to starting amount
+    setCash(10000);
     const initialAllocations: Record<string, number> = {};
     levelCompanies.forEach(c => {
       initialAllocations[c.id] = 0;
@@ -945,6 +1012,10 @@ const startSimulation = () => {
     setPortfolioPeak(0);
     setMarketMood("bull");
     setHoldingPeriods({});
+    setNewsInfluencedTrades(0);
+    setMinPortfolioValue(10000);
+    // Reset cash back to starting amount when changing levels
+    setCash(10000);
     setEtfAllocation(0);
     // Allocations and stock prices will be reset by useEffect when currentLevel changes
   };
@@ -1016,7 +1087,7 @@ const startSimulation = () => {
                           <p>• {config.stocks.length} stocks</p>
                           {config.showNews && <p>• News events</p>}
                           {config.showETF && <p>• ETF available</p>}
-                          {level === 5 && config.tradeLimit && <p>• {config.tradeLimit} trades/day limit</p>}
+                          {level === 5 && <p>• Max 40% per stock</p>}
                         </div>
                       </CardContent>
                     </Card>
@@ -1063,30 +1134,45 @@ const startSimulation = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Your Cash</p>
-                  <p className="font-display text-2xl font-bold text-foreground">${cash.toLocaleString()}</p>
+                  <p className="font-display text-2xl font-bold text-foreground">${Math.max(0, cash).toLocaleString()}</p>
                 </div>
               </div>
               
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Allocated</p>
-                  <p className="font-semibold text-foreground">${totalAllocated.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {simulationStarted ? "Portfolio Value" : "Allocated"}
+                  </p>
+                  <p className="font-semibold text-foreground">
+                    ${simulationStarted ? finalValue.toLocaleString() : totalAllocated.toLocaleString()}
+                  </p>
                 </div>
                 <div className="h-8 w-px bg-border" />
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Remaining</p>
-                  <p className={`font-semibold ${remainingCash > 0 ? "text-success" : "text-muted-foreground"}`}>
-                    ${remainingCash.toLocaleString()}
+                  <p className="text-sm text-muted-foreground">
+                    {simulationStarted ? "Available Cash" : "Remaining"}
+                  </p>
+                  <p className={`font-semibold ${(simulationStarted ? Math.max(0, cash) : remainingCash) > 0 ? "text-success" : "text-muted-foreground"}`}>
+                    ${simulationStarted ? Math.max(0, cash).toLocaleString() : remainingCash.toLocaleString()}
                   </p>
                 </div>
                 {currentLevel === 5 && (
                   <>
                     <div className="h-8 w-px bg-border" />
                     <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Trades Today</p>
-                      <p className={`font-semibold ${dailyTradeCount >= (config.tradeLimit || 999) ? "text-destructive" : "text-foreground"}`}>
-                        {dailyTradeCount}/{config.tradeLimit || 0}
-                      </p>
+                      <p className="text-sm text-muted-foreground">Max Stock</p>
+                      {(() => {
+                        const totalAllocation = Object.values(allocations).reduce((sum, val) => sum + (val || 0), 0) + (etfAllocation || 0);
+                        const maxStockPercent = totalAllocation > 0
+                          ? Math.max(...Object.values(allocations).map(amt => (amt / totalAllocation) * 100), 0)
+                          : 0;
+                        const exceedsLimit = maxStockPercent > 40.01;
+                        return (
+                          <p className={`font-semibold ${exceedsLimit ? "text-destructive" : maxStockPercent > 35 ? "text-warning" : "text-foreground"}`}>
+                            {maxStockPercent.toFixed(0)}% / 40%
+                          </p>
+                        );
+                      })()}
                     </div>
                   </>
                 )}
@@ -1190,7 +1276,7 @@ const startSimulation = () => {
                           <Progress value={(etfAllocation / cash) * 100} className="h-2" />
                         </div>
                       )}
-                      {totalAllocated === 0 && (
+                      {totalAllocated < 0.01 && (
                         <p className="text-sm text-muted-foreground text-center py-4">
                           Start allocating cash to see your portfolio
                         </p>
@@ -1198,10 +1284,27 @@ const startSimulation = () => {
                     </CardContent>
                   </Card>
 
-                  {/* News Preview */}
-                  {config.showNews && (
-                    <NewsSection news={getNewsForLevel()} currentDay={config.maxDays} isPreview={true} />
-                  )}
+
+                  {/* AI Assistant */}
+                  <SimulatorAI
+                    currentLevel={currentLevel}
+                    levelName={config.name}
+                    levelDescription={config.description}
+                    winConditions={config.winConditions}
+                    maxDays={config.maxDays}
+                    stocks={config.stocks}
+                    showNews={config.showNews}
+                    showETF={config.showETF}
+                    currentDay={currentDay}
+                    portfolioValue={totalAllocated}
+                    allocations={allocations}
+                    etfAllocation={etfAllocation}
+                    tradeCount={tradeCount}
+                    maxDrawdown={maxDrawdown}
+                    marketMood={marketMood}
+                    newsInfluencedTrades={newsInfluencedTrades}
+                    minPortfolioValue={minPortfolioValue}
+                  />
 
                   {/* Level Goals */}
                   <Card key={`level-goals-${currentLevel}`} className="border-2 border-primary/30 bg-primary/5">
@@ -1239,16 +1342,15 @@ const startSimulation = () => {
                                 <p className="text-xs text-muted-foreground mb-2">
                                   <strong className="text-foreground">Duration:</strong> 15 days
                                 </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  Pass if:
-                                </p>
-                                <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Portfolio ≥ <strong className="text-foreground">$10,200</strong></li>
-                                  <li>AND at least <strong className="text-foreground">1 trade influenced by news</strong></li>
-                                </ul>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Note:</strong> Encourages interaction with news, not random trading.
-                                </p>
+                                  <p className="text-xs text-muted-foreground mb-2">
+                                    Pass if:
+                                  </p>
+                                  <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
+                                    <li>Portfolio ≥ <strong className="text-foreground">$10,200</strong></li>
+                                  </ul>
+                                  <p className="text-xs text-muted-foreground mb-2">
+                                    <strong className="text-foreground">Note:</strong> React to news and market volatility to grow your portfolio.
+                                  </p>
                               </>
                             );
                           case 3:
@@ -1297,28 +1399,7 @@ const startSimulation = () => {
                             return (
                               <>
                                 <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Goal:</strong> Survive under pressure
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Duration:</strong> 25 days
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  Pass if:
-                                </p>
-                                <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Portfolio ≥ <strong className="text-foreground">$10,200</strong></li>
-                                  <li>AND never drop below <strong className="text-foreground">$7,500</strong></li>
-                                </ul>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Note:</strong> Teaches capital preservation.
-                                </p>
-                              </>
-                            );
-                          case 6:
-                            return (
-                              <>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Goal:</strong> Consistency over precision
+                                  <strong className="text-foreground">Goal:</strong> Adapt under constraints
                                 </p>
                                 <p className="text-xs text-muted-foreground mb-2">
                                   <strong className="text-foreground">Duration:</strong> 30 days
@@ -1327,11 +1408,34 @@ const startSimulation = () => {
                                   Pass if:
                                 </p>
                                 <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Average daily return ≥ <strong className="text-foreground">0.15%</strong></li>
-                                  <li>AND trades ≤ <strong className="text-foreground">15</strong></li>
+                                  <li><strong className="text-success">Bull market</strong>: Portfolio ≥ <strong className="text-foreground">$11,000</strong></li>
+                                  <li><strong className="text-destructive">Bear market</strong>: Portfolio ≥ <strong className="text-foreground">$9,800</strong></li>
+                                  <li>Never drop below <strong className="text-foreground">$7,500</strong></li>
+                                  <li>No single stock &gt; <strong className="text-foreground">40%</strong> of portfolio</li>
                                 </ul>
                                 <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Note:</strong> This rewards steady strategy.
+                                  <strong className="text-foreground">Note:</strong> Adapt to market conditions while maintaining diversification.
+                                </p>
+                              </>
+                            );
+                          case 6:
+                            return (
+                              <>
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  <strong className="text-foreground">Goal:</strong> True diversification
+                                </p>
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  <strong className="text-foreground">Duration:</strong> 35 days
+                                </p>
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  Pass if:
+                                </p>
+                                <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
+                                  <li>Final portfolio ≥ <strong className="text-foreground">$10,800</strong></li>
+                                  <li>AND no sector &gt; <strong className="text-foreground">40%</strong> allocation</li>
+                                </ul>
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  <strong className="text-foreground">Note:</strong> Money + structure.
                                 </p>
                               </>
                             );
@@ -1348,7 +1452,7 @@ const startSimulation = () => {
                                   Pass if:
                                 </p>
                                 <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Final portfolio ≥ <strong className="text-foreground">$11,000</strong></li>
+                                  <li>Final portfolio ≥ <strong className="text-foreground">$10,800</strong></li>
                                   <li>AND no sector &gt; <strong className="text-foreground">40%</strong> allocation</li>
                                 </ul>
                                 <p className="text-xs text-muted-foreground mb-2">
@@ -1369,7 +1473,7 @@ const startSimulation = () => {
                                   Pass if:
                                 </p>
                                 <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li><strong className="text-success">Bull market</strong>: Portfolio ≥ <strong className="text-foreground">$11,500</strong></li>
+                                  <li><strong className="text-success">Bull market</strong>: Portfolio ≥ <strong className="text-foreground">$11,200</strong></li>
                                   <li><strong className="text-destructive">Bear market</strong>: Portfolio ≥ <strong className="text-foreground">$9,800</strong></li>
                                 </ul>
                                 <p className="text-xs text-muted-foreground mb-2">
@@ -1412,7 +1516,7 @@ const startSimulation = () => {
                                 </p>
                                 <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
                                   <li>Hold at least one stock ≥ <strong className="text-foreground">70%</strong> of level</li>
-                                  <li>Final portfolio ≥ <strong className="text-foreground">$11,300</strong></li>
+                                  <li>Final portfolio ≥ <strong className="text-foreground">$11,100</strong></li>
                                 </ul>
                                 <p className="text-xs text-muted-foreground mb-2">
                                   <strong className="text-foreground">Note:</strong> Rewards long-term conviction.
@@ -1453,7 +1557,7 @@ const startSimulation = () => {
                                   Pass if:
                                 </p>
                                 <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Portfolio ≥ <strong className="text-foreground">$12,000</strong></li>
+                                  <li>Portfolio ≥ <strong className="text-foreground">$11,700</strong></li>
                                   <li>AND outperform ETF by ≥ <strong className="text-foreground">2%</strong></li>
                                 </ul>
                                 <p className="text-xs text-muted-foreground mb-2">
@@ -1473,7 +1577,7 @@ const startSimulation = () => {
                     size="lg" 
                     className="w-full group"
                     onClick={startSimulation}
-                    disabled={totalAllocated === 0}
+                    disabled={totalAllocated < 0.01}
                   >
                     <Play className="h-5 w-5" />
                     Start Simulation
@@ -1522,21 +1626,12 @@ const startSimulation = () => {
                             );
                           } else if (currentLevel === 2) {
                             const portfolioMeets = finalValue >= 10200;
-                            const newsTradeMeets = newsInfluencedTrades >= 1;
                             return (
                               <>
                                 <p>
                                   Current: <strong className="text-foreground">${finalValue.toLocaleString()}</strong> • 
                                   Target: <strong className={portfolioMeets ? "text-success" : "text-foreground"}>$10,200+</strong>
                                   {portfolioMeets ? " ✓" : ""}
-                                </p>
-                                <p className={newsTradeMeets ? "text-success" : "text-muted-foreground"}>
-                                  News trades: <strong>{newsInfluencedTrades}</strong>/1 {newsTradeMeets ? "✓" : ""}
-                                  {newsInfluencedTrades === 0 && (
-                                    <span className="block text-xs mt-1 text-muted-foreground">
-                                      Tip: Trade a stock on the same day news affects it!
-                                    </span>
-                                  )}
                                 </p>
                               </>
                             );
@@ -1566,33 +1661,47 @@ const startSimulation = () => {
                               </>
                             );
                           } else if (currentLevel === 5) {
+                            const targetValue = marketMood === "bull" ? 11000 : 9800;
+                            const totalAllocation = Object.values(allocations).reduce((sum, val) => sum + (val || 0), 0) + (etfAllocation || 0);
+                            const maxStockPercent = totalAllocation > 0
+                              ? Math.max(...Object.values(allocations).map(amt => (amt / totalAllocation) * 100), 0)
+                              : 0;
+                            const meetsTarget = finalValue >= targetValue;
+                            const withinStockLimit = maxStockPercent <= 40.01;
                             return (
                               <>
                                 <p>
                                   Current: <strong className="text-foreground">${finalValue.toLocaleString()}</strong> • 
-                                  Target: <strong className={finalValue >= 10200 ? "text-success" : "text-foreground"}>$10,200+</strong>
+                                  Target: <strong className={meetsTarget ? "text-success" : "text-foreground"}>${targetValue.toLocaleString()}+</strong>
                                 </p>
                                 <p>
-                                  Min Value: <strong className={minPortfolioValue >= 7500 ? "text-success" : "text-destructive"}>${minPortfolioValue.toLocaleString()}</strong> (need ≥$7,500)
+                                  Min Value: <strong className={minPortfolioValue >= 7500 ? "text-success" : "text-destructive"}>${minPortfolioValue.toLocaleString()}</strong> (need ≥$7,500) • 
+                                  Max Stock: <strong className={withinStockLimit ? "text-success" : "text-destructive"}>{maxStockPercent.toFixed(0)}%</strong> (need ≤40%)
                                 </p>
                               </>
                             );
                           } else if (currentLevel === 6) {
-                            const avgDailyReturn = portfolioHistory.length > 1 
-                              ? portfolioHistory.slice(1).reduce((sum, entry, idx) => {
-                                  const prevValue = portfolioHistory[idx]?.value || startingValue;
-                                  const dailyReturn = prevValue > 0 ? (entry.value - prevValue) / prevValue : 0;
-                                  return sum + dailyReturn;
-                                }, 0) / (portfolioHistory.length - 1) * 100
+                            const sectorAllocations: Record<string, number> = {};
+                            Object.entries(allocations).forEach(([id, amount]) => {
+                              if (amount > 0) {
+                                const company = levelCompanies.find(c => c.id === id);
+                                if (company) {
+                                  sectorAllocations[company.sector] = (sectorAllocations[company.sector] || 0) + amount;
+                                }
+                              }
+                            });
+                            const totalAllocatedForSectors = Object.values(allocations).reduce((sum, val) => sum + val, 0);
+                            const maxSectorPercent = totalAllocatedForSectors > 0 
+                              ? Math.max(...Object.values(sectorAllocations).map(amt => (amt / totalAllocatedForSectors) * 100), 0)
                               : 0;
                             return (
                               <>
                                 <p>
                                   Current: <strong className="text-foreground">${finalValue.toLocaleString()}</strong> • 
-                                  Trades: <strong className={tradeCount <= 15 ? "text-success" : "text-destructive"}>{tradeCount}</strong>/15
+                                  Target: <strong className={finalValue >= 10800 ? "text-success" : "text-foreground"}>$10,800+</strong>
                                 </p>
-                                <p className={avgDailyReturn >= 0.15 ? "text-success" : ""}>
-                                  Avg Daily Return: {avgDailyReturn >= 0 ? "+" : ""}{avgDailyReturn.toFixed(3)}% (need ≥0.15%)
+                                <p>
+                                  Max Sector: <strong className={maxSectorPercent <= 40 ? "text-success" : "text-destructive"}>{maxSectorPercent.toFixed(0)}%</strong> (need ≤40%)
                                 </p>
                               </>
                             );
@@ -1606,12 +1715,16 @@ const startSimulation = () => {
                                 }
                               }
                             });
-                            const maxSectorPercent = Math.max(...Object.values(sectorAllocations).map(amt => (amt / startingValue) * 100), 0);
+                            // Use original total allocated amount, not startingValue which can change after price movements
+                            const totalAllocatedForSectors = Object.values(allocations).reduce((sum, val) => sum + val, 0);
+                            const maxSectorPercent = totalAllocatedForSectors > 0
+                              ? Math.max(...Object.values(sectorAllocations).map(amt => (amt / totalAllocatedForSectors) * 100), 0)
+                              : 0;
                             return (
                               <>
                                 <p>
                                   Current: <strong className="text-foreground">${finalValue.toLocaleString()}</strong> • 
-                                  Target: <strong className="text-success">$11,000+</strong>
+                                  Target: <strong className="text-success">$10,800+</strong>
                                 </p>
                                 <p>
                                   Max Sector: <strong className={maxSectorPercent <= 40 ? "text-success" : "text-destructive"}>{maxSectorPercent.toFixed(0)}%</strong> (need ≤40%)
@@ -1619,7 +1732,7 @@ const startSimulation = () => {
                               </>
                             );
                           } else if (currentLevel === 8) {
-                            const targetValue = marketMood === "bull" ? 11500 : 9800;
+                            const targetValue = marketMood === "bull" ? 11200 : 9800;
                             return (
                               <>
                                 <p>
@@ -1651,7 +1764,7 @@ const startSimulation = () => {
                               <>
                                 <p>
                                   Current: <strong className="text-foreground">${finalValue.toLocaleString()}</strong> • 
-                                  Target: <strong className="text-success">$11,300+</strong>
+                                  Target: <strong className="text-success">$11,100+</strong>
                                 </p>
                                 <p>
                                   Longest Hold: <strong className={minHoldingPercent >= 70 ? "text-success" : ""}>{minHoldingPercent.toFixed(0)}%</strong> of level (need ≥70%)
@@ -1680,7 +1793,7 @@ const startSimulation = () => {
                               <>
                                 <p>
                                   Current: <strong className="text-foreground">${finalValue.toLocaleString()}</strong> • 
-                                  Target: <strong className="text-success">$12,000+</strong>
+                                  Target: <strong className="text-success">$11,700+</strong>
                                 </p>
                                 <p>
                                   Outperform ETF: <strong className={outperformsBy >= 2 ? "text-success" : ""}>{outperformsBy >= 0 ? "+" : ""}{outperformsBy.toFixed(2)}%</strong> (need ≥2%)
@@ -1700,9 +1813,9 @@ const startSimulation = () => {
                           Next Day
                       </Button>
                       ) : (
-                        <Button variant="hero" onClick={nextDay} disabled={currentLevel === 5 && dailyTradeCount >= (config.tradeLimit || 999)}>
+                        <Button variant="hero" onClick={nextDay}>
                           Next Day
-                      </Button>
+                        </Button>
                       )
                     ) : null}
                     <Button variant="outline" size="sm" onClick={resetSimulation}>
@@ -1718,6 +1831,107 @@ const startSimulation = () => {
                 {/* Progress bar */}
                 <Progress value={(currentDay / config.maxDays) * 100} className="h-2" />
 
+                {/* Trading Controls During Simulation */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-display text-xl font-semibold text-foreground">
+                      Trade Stocks (Day {currentDay})
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Buy/sell at current market prices
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {levelCompanies.map((company) => {
+                      const currentPrice = stockPrices[company.id] || company.currentValue;
+                      const priceChange = currentPrice - company.currentValue;
+                      const priceChangePercent = company.currentValue > 0 
+                        ? ((priceChange / company.currentValue) * 100).toFixed(2)
+                        : "0.00";
+                      const Icon = company.icon;
+                      
+                      return (
+                        <Card key={company.id} variant="interactive">
+                          <CardContent className="p-5">
+                            <div className="flex items-start gap-3 mb-4">
+                              <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-accent-lighter text-accent`}>
+                                <Icon className="h-6 w-6" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-display font-semibold text-foreground">{company.name}</h3>
+                                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{company.ticker}</span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-sm font-semibold text-foreground">${currentPrice.toFixed(2)}</span>
+                                  <span className={`text-xs ${priceChange >= 0 ? "text-success" : "text-destructive"}`}>
+                                    {priceChange >= 0 ? "↑" : "↓"} {Math.abs(parseFloat(priceChangePercent))}%
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Your allocation</span>
+                                <span className="font-semibold text-foreground">${(allocations[company.id] || 0).toLocaleString()}</span>
+                              </div>
+                              <Slider
+                                value={[allocations[company.id] || 0]}
+                                onValueChange={(value) => handleAllocationChange(company.id, value)}
+                                max={Math.max(10000, (allocations[company.id] || 0) + Math.max(0, cash) + 1000)}
+                                step={10}
+                                className="w-full"
+                              />
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span className={company.riskLevel === "low" ? "text-success" : company.riskLevel === "medium" ? "text-warning" : "text-destructive"}>
+                                  Risk: {company.riskLevel}
+                                </span>
+                                <span>Original: ${company.currentValue}</span>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+
+                  {/* ETF Option During Simulation */}
+                  {config.showETF && (
+                    <Card variant="highlighted">
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                            <PieChart className="h-7 w-7" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-display font-semibold text-lg text-foreground mb-1">
+                              Diversified Bundle (ETF)
+                            </h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                              Automatically spreads your cash across all stocks equally — lower risk!
+                            </p>
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Allocation</span>
+                                <span className="font-semibold text-foreground">${etfAllocation.toLocaleString()}</span>
+                              </div>
+                              <Slider
+                                value={[etfAllocation]}
+                                onValueChange={handleEtfChange}
+                                max={Math.max(10000, (etfAllocation || 0) + Math.max(0, cash) + 1000)}
+                                step={10}
+                                className="w-full"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
                 {/* Main content */}
                 <div className={`lg:col-span-2 grid gap-6 ${config.showNews ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}`}>
                   {/* Chart */}
@@ -1725,12 +1939,39 @@ const startSimulation = () => {
 
                   {/* News */}
                   {config.showNews && (
-                  <NewsSection news={news} currentDay={currentDay} />
+                  <NewsSection 
+                    news={news} 
+                    currentDay={currentDay} 
+                    stockPrices={stockPrices}
+                    previousPrices={previousPrices}
+                    levelCompanies={levelCompanies.map(c => ({ id: c.id, name: c.name, ticker: c.ticker }))}
+                  />
                   )}
                 </div>
 
                 {/* Sidebar with Goals */}
                 <div className="space-y-6">
+                  {/* AI Assistant */}
+                  <SimulatorAI
+                    currentLevel={currentLevel}
+                    levelName={config.name}
+                    levelDescription={config.description}
+                    winConditions={config.winConditions}
+                    maxDays={config.maxDays}
+                    stocks={config.stocks}
+                    showNews={config.showNews}
+                    showETF={config.showETF}
+                    currentDay={currentDay}
+                    portfolioValue={finalValue}
+                    allocations={allocations}
+                    etfAllocation={etfAllocation}
+                    tradeCount={tradeCount}
+                    maxDrawdown={maxDrawdown}
+                    marketMood={marketMood}
+                    newsInfluencedTrades={newsInfluencedTrades}
+                    minPortfolioValue={minPortfolioValue}
+                  />
+
                   {/* Level Goals during simulation */}
                   <Card key={`level-goals-sim-${currentLevel}`} className="border-2 border-primary/30 bg-primary/5">
                     <CardContent className="p-4">
@@ -1767,16 +2008,15 @@ const startSimulation = () => {
                                 <p className="text-xs text-muted-foreground mb-2">
                                   <strong className="text-foreground">Duration:</strong> 15 days
                                 </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  Pass if:
-                                </p>
-                                <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Portfolio ≥ <strong className="text-foreground">$10,200</strong></li>
-                                  <li>AND at least <strong className="text-foreground">1 trade influenced by news</strong></li>
-                                </ul>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Note:</strong> Encourages interaction with news, not random trading.
-                                </p>
+                                  <p className="text-xs text-muted-foreground mb-2">
+                                    Pass if:
+                                  </p>
+                                  <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
+                                    <li>Portfolio ≥ <strong className="text-foreground">$10,200</strong></li>
+                                  </ul>
+                                  <p className="text-xs text-muted-foreground mb-2">
+                                    <strong className="text-foreground">Note:</strong> React to news and market volatility to grow your portfolio.
+                                  </p>
                               </>
                             );
                           case 3:
@@ -1825,28 +2065,7 @@ const startSimulation = () => {
                             return (
                               <>
                                 <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Goal:</strong> Survive under pressure
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Duration:</strong> 25 days
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  Pass if:
-                                </p>
-                                <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Portfolio ≥ <strong className="text-foreground">$10,200</strong></li>
-                                  <li>AND never drop below <strong className="text-foreground">$7,500</strong></li>
-                                </ul>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Note:</strong> Teaches capital preservation.
-                                </p>
-                              </>
-                            );
-                          case 6:
-                            return (
-                              <>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Goal:</strong> Consistency over precision
+                                  <strong className="text-foreground">Goal:</strong> Adapt under constraints
                                 </p>
                                 <p className="text-xs text-muted-foreground mb-2">
                                   <strong className="text-foreground">Duration:</strong> 30 days
@@ -1855,11 +2074,34 @@ const startSimulation = () => {
                                   Pass if:
                                 </p>
                                 <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Average daily return ≥ <strong className="text-foreground">0.15%</strong></li>
-                                  <li>AND trades ≤ <strong className="text-foreground">15</strong></li>
+                                  <li><strong className="text-success">Bull market</strong>: Portfolio ≥ <strong className="text-foreground">$11,000</strong></li>
+                                  <li><strong className="text-destructive">Bear market</strong>: Portfolio ≥ <strong className="text-foreground">$9,800</strong></li>
+                                  <li>Never drop below <strong className="text-foreground">$7,500</strong></li>
+                                  <li>No single stock &gt; <strong className="text-foreground">40%</strong> of portfolio</li>
                                 </ul>
                                 <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Note:</strong> This rewards steady strategy.
+                                  <strong className="text-foreground">Note:</strong> Adapt to market conditions while maintaining diversification.
+                                </p>
+                              </>
+                            );
+                          case 6:
+                            return (
+                              <>
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  <strong className="text-foreground">Goal:</strong> True diversification
+                                </p>
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  <strong className="text-foreground">Duration:</strong> 35 days
+                                </p>
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  Pass if:
+                                </p>
+                                <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
+                                  <li>Final portfolio ≥ <strong className="text-foreground">$10,800</strong></li>
+                                  <li>AND no sector &gt; <strong className="text-foreground">40%</strong> allocation</li>
+                                </ul>
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  <strong className="text-foreground">Note:</strong> Money + structure.
                                 </p>
                               </>
                             );
@@ -1876,7 +2118,7 @@ const startSimulation = () => {
                                   Pass if:
                                 </p>
                                 <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Final portfolio ≥ <strong className="text-foreground">$11,000</strong></li>
+                                  <li>Final portfolio ≥ <strong className="text-foreground">$10,800</strong></li>
                                   <li>AND no sector &gt; <strong className="text-foreground">40%</strong> allocation</li>
                                 </ul>
                                 <p className="text-xs text-muted-foreground mb-2">
@@ -1897,7 +2139,7 @@ const startSimulation = () => {
                                   Pass if:
                                 </p>
                                 <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li><strong className="text-success">Bull market</strong>: Portfolio ≥ <strong className="text-foreground">$11,500</strong></li>
+                                  <li><strong className="text-success">Bull market</strong>: Portfolio ≥ <strong className="text-foreground">$11,200</strong></li>
                                   <li><strong className="text-destructive">Bear market</strong>: Portfolio ≥ <strong className="text-foreground">$9,800</strong></li>
                                 </ul>
                                 <p className="text-xs text-muted-foreground mb-2">
@@ -1940,7 +2182,7 @@ const startSimulation = () => {
                                 </p>
                                 <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
                                   <li>Hold at least one stock ≥ <strong className="text-foreground">70%</strong> of level</li>
-                                  <li>Final portfolio ≥ <strong className="text-foreground">$11,300</strong></li>
+                                  <li>Final portfolio ≥ <strong className="text-foreground">$11,100</strong></li>
                                 </ul>
                                 <p className="text-xs text-muted-foreground mb-2">
                                   <strong className="text-foreground">Note:</strong> Rewards long-term conviction.
@@ -1981,7 +2223,7 @@ const startSimulation = () => {
                                   Pass if:
                                 </p>
                                 <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Portfolio ≥ <strong className="text-foreground">$12,000</strong></li>
+                                  <li>Portfolio ≥ <strong className="text-foreground">$11,700</strong></li>
                                   <li>AND outperform ETF by ≥ <strong className="text-foreground">2%</strong></li>
                                 </ul>
                                 <p className="text-xs text-muted-foreground mb-2">
