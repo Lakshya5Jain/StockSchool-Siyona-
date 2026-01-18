@@ -23,7 +23,7 @@ const Safety = () => {
                 Safety & Ethics
               </h1>
               <p className="text-lg text-muted-foreground">
-                MarketMinds is built with student safety as our top priority. 
+                StockSchool is built with student safety as our top priority. 
                 Learn about how we keep you safe while you learn about markets.
               </p>
             </div>
@@ -40,13 +40,13 @@ const Safety = () => {
                 <SafetyCard
                   icon={AlertCircle}
                   title="No Real Money"
-                  description="Everything on MarketMinds uses virtual tokens. You cannot deposit, withdraw, or risk any real money. This is purely educational."
+                  description="Everything on StockSchool uses virtual money. You cannot deposit, withdraw, or risk any real money. This is purely educational."
                   color="warning"
                 />
                 <SafetyCard
                   icon={Heart}
                   title="No Financial Advice"
-                  description="We teach concepts, not investment tips. MarketMinds never recommends specific stocks or tells you what to buy or sell."
+                  description="We teach concepts, not investment tips. StockSchool never recommends specific stocks or tells you what to buy or sell."
                   color="destructive"
                 />
                 <SafetyCard
@@ -76,8 +76,7 @@ const Safety = () => {
                     <ul className="space-y-3">
                       {[
                         "Teach market concepts with fun analogies",
-                        "Use fictional companies for simulations",
-                        "Provide virtual tokens for practice",
+                        "Provide virtual money for practice",
                         "Explain why diversification reduces risk",
                         "Encourage critical thinking",
                         "Focus on long-term understanding",
@@ -102,7 +101,6 @@ const Safety = () => {
                     <ul className="space-y-3">
                       {[
                         "Recommend real stocks or investments",
-                        "Use real company names in simulations",
                         "Encourage real investing for students",
                         "Create competitive leaderboards",
                         "Promote get-rich-quick thinking",
@@ -128,21 +126,21 @@ const Safety = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-muted-foreground">
-                    MarketMinds is designed to be used in educational settings and at home. 
+                    StockSchool is designed to be used in educational settings and at home. 
                     Here's what you should know:
                   </p>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="rounded-xl bg-muted/50 p-4">
                       <h4 className="font-semibold text-foreground mb-2">Supervised Learning</h4>
                       <p className="text-sm text-muted-foreground">
-                        While MarketMinds is safe for independent use, we encourage adults to 
+                        While StockSchool is safe for independent use, we encourage adults to 
                         discuss concepts with students and reinforce that this is educational only.
                       </p>
                     </div>
                     <div className="rounded-xl bg-muted/50 p-4">
                       <h4 className="font-semibold text-foreground mb-2">Classroom Ready</h4>
                       <p className="text-sm text-muted-foreground">
-                        Teachers can use MarketMinds to introduce financial literacy concepts 
+                        Teachers can use StockSchool to introduce financial literacy concepts 
                         in a safe, engaging way without any real-world risk.
                       </p>
                     </div>
@@ -162,11 +160,11 @@ const Safety = () => {
                         Important Disclaimer
                       </h3>
                       <p className="text-muted-foreground">
-                        MarketMinds is an educational platform designed to teach middle school students 
+                        StockSchool is an educational platform designed to teach middle school students 
                         about market concepts. <strong>This is not a trading platform.</strong> We do not 
                         provide investment advice, and nothing on this platform should be considered a 
                         recommendation to buy, sell, or hold any securities. All simulations use 
-                        fictional companies and virtual currency that has no real-world value. 
+                        virtual currency that has no real-world value. 
                         Always consult a qualified financial advisor for real investment decisions.
                       </p>
                     </div>

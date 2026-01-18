@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Coins, TrendingUp, TrendingDown, 
   Zap, Gamepad2, AlertCircle, Lock, CheckCircle2,
@@ -350,10 +352,27 @@ const Simulator = () => {
   const [currentLevel, setCurrentLevel] = useState<Level>(1);
   const [completedLevels, setCompletedLevels] = useState<Level[]>([]);
   const [showLevelSelect, setShowLevelSelect] = useState(false);
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
 
   // Game state
   const [cash, setCash] = useState(10000);
+  // Use a ref to track the latest cash value for synchronous access (prevents stale closure issues)
+  const cashRef = useRef(10000);
+  
+  // Keep cashRef in sync with cash state
+  useEffect(() => {
+    cashRef.current = cash;
+  }, [cash]);
+  
   const [allocations, setAllocations] = useState<Record<string, number>>({});
+  // Use a ref to track the latest allocations for synchronous access
+  const allocationsRef = useRef<Record<string, number>>({});
+  
+  // Keep allocationsRef in sync with allocations state
+  useEffect(() => {
+    allocationsRef.current = allocations;
+  }, [allocations]);
+  
   const [etfAllocation, setEtfAllocation] = useState(0);
   const [simulationStarted, setSimulationStarted] = useState(false);
   const [currentDay, setCurrentDay] = useState(0);
@@ -364,6 +383,9 @@ const Simulator = () => {
   const [tradeCount, setTradeCount] = useState(0);
   const [dailyTradeCount, setDailyTradeCount] = useState(0);
   const [maxDrawdown, setMaxDrawdown] = useState(0);
+  // Track raw input values for each company (to allow free typing)
+  const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  const [focusedInputs, setFocusedInputs] = useState<Record<string, boolean>>({});
   const [marketMood, setMarketMood] = useState<"bull" | "bear" | "sideways">("bull");
   const [holdingPeriods, setHoldingPeriods] = useState<Record<string, number>>({});
   const [portfolioPeak, setPortfolioPeak] = useState(0);
@@ -439,7 +461,11 @@ const Simulator = () => {
   // Calculate total allocated - sum all allocations and ETF, rounding to avoid floating point issues
   const allocationsSum = Object.values(allocations).reduce((sum, val) => sum + (val || 0), 0);
   const totalAllocated = Math.round((allocationsSum + (etfAllocation || 0)) * 100) / 100;
-  const remainingCash = Math.round((cash - totalAllocated) * 100) / 100;
+  // Before simulation: remaining cash = cash - allocated (cash starts at 10000)
+  // During simulation: remaining cash = cash (which is updated when buying/selling)
+  const remainingCash = simulationStarted 
+    ? Math.round(cash * 100) / 100
+    : Math.round((cash - totalAllocated) * 100) / 100;
   const config = levelConfig[currentLevel];
 
   const calculatePortfolioValue = (prices: Record<string, number>) => {
@@ -474,102 +500,164 @@ const Simulator = () => {
       
       total += etfAllocation * avgChange;
     }
-    return Math.round(total);
+    // Return value with 2 decimal places instead of rounding to nearest dollar
+    return Math.round(total * 100) / 100;
   };
 
   const handleAllocationChange = (companyId: string, value: number[]) => {
-    // Round to nearest dollar to avoid floating point precision issues
-    const newValue = Math.round(value[0] || 0);
-    const oldValue = allocations[companyId] || 0;
+    // Round to 2 decimal places to maintain precision and ensure buy/sell calculations match exactly
+    const newValue = Math.round((value[0] || 0) * 100) / 100;
     
     if (simulationStarted) {
       // During simulation: calculate cost at CURRENT market prices
       const company = levelCompanies.find(c => c.id === companyId);
-      if (company && stockPrices[companyId] && company.currentValue > 0) {
-        // Calculate the difference in allocation value at current prices
-        const allocationDifference = newValue - oldValue;
-        // Cost at current price = (allocation difference) * (current price / original price)
-        const priceRatio = stockPrices[companyId] / company.currentValue;
-        
-        // If buying (increasing allocation), need cash
-        // If selling (decreasing allocation), get cash back
-        if (allocationDifference > 0) {
-          // Buying: calculate cost at current market price
-          const costAtCurrentPrice = allocationDifference * priceRatio;
-          // Check if we have enough cash
-          if (costAtCurrentPrice > cash + 0.01) {
-            // Not enough cash - don't update
-            return;
-          }
-          
-          // For Level 5: Check max stock allocation (no single stock > 40% of total portfolio value)
-          // During simulation, use current portfolio value (cash + portfolio value) as the base
-          if (currentLevel === 5) {
-            const currentPortfolioValue = calculatePortfolioValue(stockPrices);
-            const totalPortfolioValue = cash + currentPortfolioValue;
-            const maxSingleStockAllocation = totalPortfolioValue * 0.40; // 40% of total portfolio
-            
-            // Calculate what the new allocation value would be at current prices
-            const newAllocationValue = newValue * priceRatio;
-            
-            if (newAllocationValue > maxSingleStockAllocation + 0.01) {
-              return; // Don't allow allocation if it exceeds 40% of total portfolio
-            }
-          }
-          
-          // Subtract cash when buying
-          setCash(prev => Math.max(0, prev - costAtCurrentPrice));
-          
-          if (Math.abs(allocationDifference) > 0.01) {
-            setTradeCount(prev => prev + 1);
-            setDailyTradeCount(prev => prev + 1);
-          }
-        } else if (allocationDifference < 0) {
-          // Selling: calculate cash back at current market price
-          // oldValue is the original allocation amount, we need to calculate its current value
-          // The current value of the position = oldValue * priceRatio
-          // We're selling (oldValue - newValue) of the original allocation
-          const soldOriginalAmount = Math.abs(allocationDifference); // Original $ amount being sold
-          const currentValueOfSoldAmount = soldOriginalAmount * priceRatio; // Current value at market price
-          // Add cash back when selling (round to avoid floating point issues)
-          setCash(prev => {
-            const newCash = prev + currentValueOfSoldAmount;
-            return Math.round(newCash * 100) / 100;
-          });
-          
-          if (Math.abs(allocationDifference) > 0.01) {
-            setTradeCount(prev => prev + 1);
-            setDailyTradeCount(prev => prev + 1);
-          }
-        } else {
-          // No change - don't update anything
-          return;
-        }
-        
-        // Only update allocations if we successfully processed the transaction
-        setAllocations(prev => ({ ...prev, [companyId]: newValue }));
-        return; // Exit early to avoid duplicate allocation update
-      } else {
-        // Company/price check failed - don't update
+      if (!company || !stockPrices[companyId] || company.currentValue <= 0) {
+        return; // Company/price check failed - don't update
+      }
+      
+      const priceRatio = stockPrices[companyId] / company.currentValue;
+      
+      // Prevent selling more than owned (newValue cannot be negative)
+      if (newValue < 0) {
         return;
       }
-    } else {
-      // Before simulation: use simple cash check
-    const otherAllocations = Object.entries(allocations)
-      .filter(([id]) => id !== companyId)
-        .reduce((sum, [, val]) => sum + (val || 0), 0) + (etfAllocation || 0);
       
-      // Check if new total allocation would exceed cash
-      if (newValue + otherAllocations > cash + 0.01) {
-        return;
+      // Use functional updates to read current allocation atomically
+      // This ensures we always use the latest values, even during rapid slider movements
+      setAllocations(prevAllocs => {
+        // CRITICAL: Round currentAllocation to 2 decimals to ensure precision consistency
+        // This prevents floating point drift when calculating differences
+        const currentAllocation = Math.round((prevAllocs[companyId] || 0) * 100) / 100;
+        const allocationDifference = newValue - currentAllocation;
+        
+        // If no change, don't update anything
+        if (Math.abs(allocationDifference) < 0.01) {
+          return prevAllocs;
+        }
+        
+        // For buying: validate cash BEFORE updating allocations
+        if (allocationDifference > 0) {
+          // CRITICAL: Calculate cost using exact same method that will be used when selling
+          // This ensures buy/sell symmetry on the same day (no cash drift)
+          // Round allocation difference first, then multiply by price ratio and round again
+          const roundedAllocationDifference = Math.round(allocationDifference * 100) / 100;
+          const costAtCurrentPrice = Math.round((roundedAllocationDifference * priceRatio) * 100) / 100;
+          
+          // CRITICAL: Check cash using ref (latest value) to prevent stale closure issues
+          // This prevents allocations from updating if we don't have enough cash
+          if (costAtCurrentPrice > cashRef.current + 0.01) {
+            return prevAllocs; // Not enough cash - don't update allocations
+          }
+          
+          // Update cash FIRST - only update allocations if cash update succeeds
+          setCash(prevCash => {
+            // CRITICAL: Double-check cash inside setCash (prevCash is the latest value)
+            if (costAtCurrentPrice > prevCash + 0.01) {
+              return prevCash; // Not enough cash - don't update
+            }
+            
+            // For Level 5: Check max stock allocation with latest cash value
+            if (currentLevel === 5) {
+              const currentPortfolioValue = calculatePortfolioValue(stockPrices);
+              const totalPortfolioValue = prevCash + currentPortfolioValue;
+              const maxSingleStockAllocation = totalPortfolioValue * 0.40;
+              const newAllocationValue = newValue * priceRatio;
+              
+              if (newAllocationValue > maxSingleStockAllocation + 0.01) {
+                return prevCash; // Don't allow allocation if it exceeds 40%
+              }
+            }
+            
+            // Track trades
+            if (Math.abs(allocationDifference) > 0.01) {
+              setTradeCount(t => t + 1);
+              setDailyTradeCount(t => t + 1);
+            }
+            
+            // CRITICAL: Subtract cash when buying - round to avoid floating point issues
+            // Ensure costAtCurrentPrice is positive (it should be since allocationDifference > 0 and priceRatio > 0)
+            const actualCost = Math.max(0, costAtCurrentPrice);
+            const newCash = Math.max(0, Math.round((prevCash - actualCost) * 100) / 100);
+            // Update cashRef immediately to keep it in sync
+            cashRef.current = newCash;
+            return newCash;
+          });
+          
+          // Only update allocations if we passed the cash check above
+          const newAllocs = { ...prevAllocs, [companyId]: newValue };
+          // Update allocationsRef immediately to keep it in sync
+          allocationsRef.current = newAllocs;
+          return newAllocs;
+        } else {
+          // Selling: update allocations and add cash back
+          // CRITICAL: To ensure cash conservation (buying and selling on same day gives same cash),
+          // we MUST use the EXACT same calculation method as buying (just in reverse)
+          const soldOriginalAmount = currentAllocation - newValue;
+          
+          // Use EXACTLY the same rounding steps as buying to ensure symmetry:
+          // 1. Round the allocation difference first
+          // 2. Then multiply by price ratio
+          // 3. Then round the result
+          const roundedSoldOriginalAmount = Math.round(soldOriginalAmount * 100) / 100;
+          const currentValueOfSoldAmount = Math.round((roundedSoldOriginalAmount * priceRatio) * 100) / 100;
+          
+          // Track trades
+          if (Math.abs(allocationDifference) > 0.01) {
+            setTradeCount(t => t + 1);
+            setDailyTradeCount(t => t + 1);
+          }
+          
+          // Add cash back when selling - use exact same rounding as buying to ensure conservation
+          setCash(prevCash => {
+            const newCash = Math.round((prevCash + currentValueOfSoldAmount) * 100) / 100;
+            // Update cashRef immediately to keep it in sync
+            cashRef.current = newCash;
+            return newCash;
+          });
+          
+          const newAllocs = { ...prevAllocs, [companyId]: newValue };
+          // Update allocationsRef immediately to keep it in sync
+          allocationsRef.current = newAllocs;
+          return newAllocs;
+        }
+      });
+      
+        return; // Exit early to avoid duplicate allocation update
+      } else {
+      // Before simulation: use simple cash check - limit to $10,000 total
+      const STARTING_CASH = 10000;
+      
+      setAllocations(prevAllocs => {
+        const oldValue = prevAllocs[companyId] || 0;
+        
+        // Get current total of ALL other allocations (other stocks + ETF)
+        // Use prevAllocs to get current allocations (from functional update)
+        const otherStockAllocationsFromPrev = Object.entries(prevAllocs)
+      .filter(([id]) => id !== companyId)
+          .reduce((sum, [, val]) => sum + (val || 0), 0);
+        
+        // Also check closure allocations for double-validation (prevents race conditions)
+        const otherStockAllocationsFromClosure = Object.entries(allocations)
+          .filter(([id]) => id !== companyId)
+          .reduce((sum, [, val]) => sum + (val || 0), 0);
+        
+        // Use the MAX of both to ensure we don't allow overspending
+        // This handles cases where prevAllocs might not have the latest updates yet
+        const otherStockAllocations = Math.max(otherStockAllocationsFromPrev, otherStockAllocationsFromClosure);
+        const otherAllocations = otherStockAllocations + (etfAllocation || 0);
+        
+        // CRITICAL: Check if new total allocation would exceed starting cash ($10,000)
+        const newTotalAllocation = newValue + otherAllocations;
+        if (newTotalAllocation > STARTING_CASH + 0.01) {
+          return prevAllocs; // Don't update if total would exceed $10,000
       }
       
       // For Level 5: Check max stock allocation (no single stock > 40% of total cash/portfolio)
       // Use total cash (10000) as the base, not current allocations
       if (currentLevel === 5) {
-        const maxSingleStockAllocation = 10000 * 0.40; // 40% of starting cash
+          const maxSingleStockAllocation = STARTING_CASH * 0.40; // 40% of starting cash
         if (newValue > maxSingleStockAllocation + 0.01) {
-          return; // Don't allow allocation if it exceeds 40% of total cash
+            return prevAllocs; // Don't allow allocation if it exceeds 40% of total cash
         }
       }
       
@@ -577,11 +665,18 @@ const Simulator = () => {
         setTradeCount(prev => prev + 1);
         setDailyTradeCount(prev => prev + 1);
       }
+        
+        return { ...prevAllocs, [companyId]: newValue };
+      });
     }
       
       // Track news-influenced trades for level 2
       // Counts if you have a position in a stock with POSITIVE news (even if allocated before news)
-      if (currentLevel === 2) {
+      if (currentLevel === 2 && simulationStarted) {
+        // Get oldValue using functional update
+        setAllocations(prevAllocs => {
+          const oldValueForNews = prevAllocs[companyId] || 0;
+          
         // Check for news on current day, previous day, or next day
         const todayNews = news.find(n => 
           n.day === currentDay || 
@@ -597,10 +692,10 @@ const Simulator = () => {
         // 4. Either you're increasing your position OR this is your first allocation
         const isPositiveNews = todayNews && todayNews.impact === "positive";
         const hasPosition = newValue > 0;
-        const isNewInvestment = oldValue === 0 && newValue > 0;
-        const isIncreasingPosition = newValue > oldValue;
+          const isNewInvestment = oldValueForNews === 0 && newValue > 0;
+          const isIncreasingPosition = newValue > oldValueForNews;
         
-        console.log(`Level 2 Trade Check: day=${currentDay}, company=${company?.name}, oldValue=${oldValue}, newValue=${newValue}`);
+          console.log(`Level 2 Trade Check: day=${currentDay}, company=${company?.name}, oldValue=${oldValueForNews}, newValue=${newValue}`);
         console.log(`  todayNews=`, todayNews, `impact=${todayNews?.impact}, affectedStocks=`, todayNews?.affectedStocks);
         console.log(`  isPositiveNews=${isPositiveNews}, hasPosition=${hasPosition}, isNewInvestment=${isNewInvestment}, isIncreasingPosition=${isIncreasingPosition}`);
         
@@ -618,6 +713,9 @@ const Simulator = () => {
         } else {
           console.log(`❌ Not counted: hasNews=${!!todayNews}, isPositiveNews=${isPositiveNews}, hasPosition=${hasPosition}, affected=${todayNews?.affectedStocks?.includes(company?.name || "")}`);
         }
+          
+          return prevAllocs; // Don't modify allocations in this callback
+        });
       }
       
       // Store rounded value to avoid precision issues (only for pre-simulation)
@@ -688,11 +786,13 @@ const startSimulation = () => {
       setTradeCount(0);
       setDailyTradeCount(0);
       setMaxDrawdown(0);
-      setPortfolioHistory([{ day: 0, value: totalAllocated }]);
+      // Initial portfolio value = investment value + cash (should be $10,000)
+      const initialPortfolioValue = totalAllocated + remainingCash;
+      setPortfolioHistory([{ day: 0, value: initialPortfolioValue }]);
       setStockPrices(Object.fromEntries(levelCompanies.map(c => [c.id, c.currentValue])));
-      setPortfolioPeak(totalAllocated);
+      setPortfolioPeak(initialPortfolioValue);
       setNewsInfluencedTrades(0);
-      setMinPortfolioValue(totalAllocated);
+      setMinPortfolioValue(initialPortfolioValue);
       // Set cash correctly at simulation start
       setCash(remainingCash);
       
@@ -809,7 +909,9 @@ const startSimulation = () => {
       // Store previous prices before updating
       setPreviousPrices(stockPrices);
       setStockPrices(newPrices);
-      const newValue = calculatePortfolioValue(newPrices);
+      const investmentValue = calculatePortfolioValue(newPrices);
+      // Portfolio value = investment value + cash (total portfolio value)
+      const newValue = Math.round((investmentValue + cash) * 100) / 100;
     
     // Track minimum portfolio value for level 5
     if (currentLevel === 5) {
@@ -940,17 +1042,21 @@ const startSimulation = () => {
       // Final portfolio ≥ $10,800 AND no sector > 40% allocation
       const meetsPortfolioTarget = finalValue >= (winCond.portfolioValue || 10800);
       const sectorAllocations: Record<string, number> = {};
+      // Calculate current portfolio values based on current stock prices
       Object.entries(allocations).forEach(([id, amount]) => {
-        if (amount > 0) {
+        if (amount > 0.01) {
           const company = levelCompanies.find(c => c.id === id);
-          if (company) {
-            sectorAllocations[company.sector] = (sectorAllocations[company.sector] || 0) + amount;
+          if (company && stockPrices[id] && company.currentValue > 0) {
+            const priceChange = stockPrices[id] / company.currentValue;
+            const currentValue = amount * priceChange;
+            sectorAllocations[company.sector] = (sectorAllocations[company.sector] || 0) + currentValue;
           }
         }
       });
-      const totalAllocatedForSectors = Object.values(allocations).reduce((sum, val) => sum + val, 0);
-      const maxSectorPercent = totalAllocatedForSectors > 0 
-        ? Math.max(...Object.values(sectorAllocations).map(amt => (amt / totalAllocatedForSectors) * 100), 0)
+      // Use current portfolio value instead of original allocation amounts
+      const totalPortfolioValue = finalValue;
+      const maxSectorPercent = totalPortfolioValue > 0 
+        ? Math.max(...Object.values(sectorAllocations).map(amt => (amt / totalPortfolioValue) * 100), 0)
         : 0;
       const withinSectorLimit = maxSectorPercent <= ((winCond.maxSectorAllocation || 0.40) * 100);
       return meetsPortfolioTarget && withinSectorLimit;
@@ -1020,16 +1126,44 @@ const startSimulation = () => {
   };
 
   // Check win condition when day changes
+  // Sync input values with allocations when not focused (e.g., when slider changes allocation)
+  useEffect(() => {
+    if (!simulationStarted) return; // Only during simulation
+    
+    // Get level-specific companies for current level
+    const levelCompanies = levelConfig[currentLevel].stocks.map(id => 
+      allCompanies.find(c => c.id === id)!
+    );
+    
+    setInputValues(prev => {
+      const updated = { ...prev };
+      levelCompanies.forEach(company => {
+        if (!focusedInputs[company.id]) {
+          // Only update if input is not focused
+          const allocation = allocations[company.id] || 0;
+          updated[company.id] = allocation === 0 ? "" : allocation.toString();
+        }
+      });
+      return updated;
+    });
+  }, [allocations, simulationStarted, focusedInputs, currentLevel]);
+
   useEffect(() => {
     if (simulationStarted && currentDay >= config.maxDays) {
       const won = checkWinConditions();
       if (won && !completedLevels.includes(currentLevel)) {
         setCompletedLevels(prev => [...prev, currentLevel]);
       }
+      // Show completion dialog when level is finished
+      setShowCompletionDialog(true);
     }
   }, [currentDay, simulationStarted]);
 
-  const finalValue = portfolioHistory.length > 0 ? (portfolioHistory[portfolioHistory.length - 1]?.value || totalAllocated) : totalAllocated;
+  // During simulation, use current portfolio value based on allocations
+  // Outside simulation, use portfolio history or total allocated
+  const finalValue = simulationStarted 
+    ? calculatePortfolioValue(stockPrices)
+    : (portfolioHistory.length > 0 ? (portfolioHistory[portfolioHistory.length - 1]?.value || totalAllocated) : totalAllocated);
   // Only check win conditions if we've completed all days
   const hasWon = currentDay >= config.maxDays && checkWinConditions();
   const levelUnlocked = (level: Level) => true; // All levels are accessible
@@ -1132,18 +1266,22 @@ const startSimulation = () => {
                   <Coins className="h-7 w-7 text-accent" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Your Cash</p>
-                  <p className="font-display text-2xl font-bold text-foreground">${Math.max(0, cash).toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">{simulationStarted ? "Portfolio Value" : "Your Cash"}</p>
+                  <p className="font-display text-2xl font-bold text-foreground">
+                    ${simulationStarted 
+                      ? (finalValue + Math.max(0, cash)).toFixed(2) 
+                      : Math.max(0, cash).toFixed(2)}
+                  </p>
                 </div>
               </div>
               
               <div className="flex items-center gap-4">
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">
-                    {simulationStarted ? "Portfolio Value" : "Allocated"}
+                    {simulationStarted ? "Current Investment Value" : "Allocated"}
                   </p>
                   <p className="font-semibold text-foreground">
-                    ${simulationStarted ? finalValue.toLocaleString() : totalAllocated.toLocaleString()}
+                    ${simulationStarted ? finalValue.toFixed(2) : totalAllocated.toFixed(2)}
                   </p>
                 </div>
                 <div className="h-8 w-px bg-border" />
@@ -1152,7 +1290,7 @@ const startSimulation = () => {
                     {simulationStarted ? "Available Cash" : "Remaining"}
                   </p>
                   <p className={`font-semibold ${(simulationStarted ? Math.max(0, cash) : remainingCash) > 0 ? "text-success" : "text-muted-foreground"}`}>
-                    ${simulationStarted ? Math.max(0, cash).toLocaleString() : remainingCash.toLocaleString()}
+                    ${simulationStarted ? Math.max(0, cash).toFixed(2) : remainingCash.toFixed(2)}
                   </p>
                 </div>
                 {currentLevel === 5 && (
@@ -1199,15 +1337,27 @@ const startSimulation = () => {
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
-                    {levelCompanies.map((company) => (
+                    {levelCompanies.map((company) => {
+                      const STARTING_CASH = 10000;
+                      const currentAllocation = allocations[company.id] || 0;
+                      const otherStockAllocations = Object.entries(allocations)
+                        .filter(([id]) => id !== company.id)
+                        .reduce((sum, [, val]) => sum + (val || 0), 0);
+                      const maxAvailable = currentAllocation + (STARTING_CASH - otherStockAllocations - (etfAllocation || 0));
+                      
+                      return (
                       <CompanyCard
                         key={company.id}
                         company={company}
-                        allocation={allocations[company.id] || 0}
+                          allocation={currentAllocation}
                         maxCash={cash}
+                          maxAvailable={maxAvailable}
+                          allocations={allocations}
+                          etfAllocation={etfAllocation}
                         onAllocationChange={(value) => handleAllocationChange(company.id, value)}
                       />
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {/* ETF Option */}
@@ -1232,8 +1382,29 @@ const startSimulation = () => {
                             </div>
                             <Slider
                               value={[etfAllocation]}
-                              onValueChange={handleEtfChange}
-                                max={cash}
+                              onValueChange={(value) => {
+                                const newValue = value[0] || 0;
+                                
+                                // CRITICAL: Validate against total $10,000 limit
+                                const STARTING_CASH = 10000;
+                                const companyTotal = Object.values(allocations).reduce((sum, val) => sum + (val || 0), 0);
+                                const totalAllocation = newValue + companyTotal;
+                                
+                                // Cap the value to ensure total doesn't exceed $10,000
+                                let cappedValue = newValue;
+                                if (totalAllocation > STARTING_CASH + 0.01) {
+                                  // Calculate maximum allowed for ETF
+                                  cappedValue = Math.max(0, Math.round(STARTING_CASH - companyTotal));
+                                }
+                                
+                                // Update with capped value
+                                handleEtfChange([cappedValue]);
+                              }}
+                              max={(() => {
+                                const STARTING_CASH = 10000;
+                                const companyTotal = Object.values(allocations).reduce((sum, val) => sum + (val || 0), 0);
+                                return Math.max(0, STARTING_CASH - companyTotal);
+                              })()}
                               step={10}
                               className="w-full"
                             />
@@ -1681,17 +1852,20 @@ const startSimulation = () => {
                             );
                           } else if (currentLevel === 6) {
                             const sectorAllocations: Record<string, number> = {};
+                            // Calculate current portfolio values based on current stock prices
                             Object.entries(allocations).forEach(([id, amount]) => {
-                              if (amount > 0) {
+                              if (amount > 0.01) {
                                 const company = levelCompanies.find(c => c.id === id);
-                                if (company) {
-                                  sectorAllocations[company.sector] = (sectorAllocations[company.sector] || 0) + amount;
+                                if (company && stockPrices[id] && company.currentValue > 0) {
+                                  const priceChange = stockPrices[id] / company.currentValue;
+                                  const currentValue = amount * priceChange;
+                                  sectorAllocations[company.sector] = (sectorAllocations[company.sector] || 0) + currentValue;
                                 }
                               }
                             });
-                            const totalAllocatedForSectors = Object.values(allocations).reduce((sum, val) => sum + val, 0);
-                            const maxSectorPercent = totalAllocatedForSectors > 0 
-                              ? Math.max(...Object.values(sectorAllocations).map(amt => (amt / totalAllocatedForSectors) * 100), 0)
+                            const totalPortfolioValue = finalValue; // Use current portfolio value
+                            const maxSectorPercent = totalPortfolioValue > 0 
+                              ? Math.max(...Object.values(sectorAllocations).map(amt => (amt / totalPortfolioValue) * 100), 0)
                               : 0;
                             return (
                               <>
@@ -1705,28 +1879,31 @@ const startSimulation = () => {
                               </>
                             );
                           } else if (currentLevel === 7) {
-                            const sectorAllocations: Record<string, number> = {};
+                            // Calculate current portfolio values for each stock based on current stock prices
+                            const stockCurrentValues: number[] = [];
                             Object.entries(allocations).forEach(([id, amount]) => {
-                              if (amount > 0) {
+                              if (amount > 0.01) {
                                 const company = levelCompanies.find(c => c.id === id);
-                                if (company) {
-                                  sectorAllocations[company.sector] = (sectorAllocations[company.sector] || 0) + amount;
+                                if (company && stockPrices[id] && company.currentValue > 0) {
+                                  const priceChange = stockPrices[id] / company.currentValue;
+                                  const currentValue = amount * priceChange;
+                                  stockCurrentValues.push(currentValue);
                                 }
                               }
                             });
-                            // Use original total allocated amount, not startingValue which can change after price movements
-                            const totalAllocatedForSectors = Object.values(allocations).reduce((sum, val) => sum + val, 0);
-                            const maxSectorPercent = totalAllocatedForSectors > 0
-                              ? Math.max(...Object.values(sectorAllocations).map(amt => (amt / totalAllocatedForSectors) * 100), 0)
+                            // Use current portfolio value to calculate max single stock percentage
+                            const totalPortfolioValue = finalValue;
+                            const maxStockPercent = totalPortfolioValue > 0 && stockCurrentValues.length > 0
+                              ? (Math.max(...stockCurrentValues) / totalPortfolioValue) * 100
                               : 0;
                             return (
                               <>
                                 <p>
                                   Current: <strong className="text-foreground">${finalValue.toLocaleString()}</strong> • 
-                                  Target: <strong className="text-success">$10,800+</strong>
+                                  Target: <strong className="text-success">$11,200+</strong>
                                 </p>
                                 <p>
-                                  Max Sector: <strong className={maxSectorPercent <= 40 ? "text-success" : "text-destructive"}>{maxSectorPercent.toFixed(0)}%</strong> (need ≤40%)
+                                  Max Stock: <strong className={maxStockPercent <= 40 ? "text-success" : "text-destructive"}>{maxStockPercent.toFixed(0)}%</strong> (need ≤40%)
                                 </p>
                               </>
                             );
@@ -1830,108 +2007,7 @@ const startSimulation = () => {
                 {/* Progress bar */}
                 <Progress value={(currentDay / config.maxDays) * 100} className="h-2" />
 
-                {/* Trading Controls During Simulation */}
-                <div className="lg:col-span-2 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h2 className="font-display text-xl font-semibold text-foreground">
-                      Trade Stocks (Day {currentDay})
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      Buy/sell at current market prices
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {levelCompanies.map((company) => {
-                      const currentPrice = stockPrices[company.id] || company.currentValue;
-                      const priceChange = currentPrice - company.currentValue;
-                      const priceChangePercent = company.currentValue > 0 
-                        ? ((priceChange / company.currentValue) * 100).toFixed(2)
-                        : "0.00";
-                      const Icon = company.icon;
-                      
-                      return (
-                        <Card key={company.id} variant="interactive">
-                          <CardContent className="p-5">
-                            <div className="flex items-start gap-3 mb-4">
-                              <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-accent-lighter text-accent`}>
-                                <Icon className="h-6 w-6" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-display font-semibold text-foreground">{company.name}</h3>
-                                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{company.ticker}</span>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-sm font-semibold text-foreground">${currentPrice.toFixed(2)}</span>
-                                  <span className={`text-xs ${priceChange >= 0 ? "text-success" : "text-destructive"}`}>
-                                    {priceChange >= 0 ? "↑" : "↓"} {Math.abs(parseFloat(priceChangePercent))}%
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="space-y-3">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Your allocation</span>
-                                <span className="font-semibold text-foreground">${(allocations[company.id] || 0).toLocaleString()}</span>
-                              </div>
-                              <Slider
-                                value={[allocations[company.id] || 0]}
-                                onValueChange={(value) => handleAllocationChange(company.id, value)}
-                                max={Math.max(10000, (allocations[company.id] || 0) + Math.max(0, cash) + 1000)}
-                                step={10}
-                                className="w-full"
-                              />
-                              <div className="flex justify-between text-xs text-muted-foreground">
-                                <span className={company.riskLevel === "low" ? "text-success" : company.riskLevel === "medium" ? "text-warning" : "text-destructive"}>
-                                  Risk: {company.riskLevel}
-                                </span>
-                                <span>Original: ${company.currentValue}</span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-
-                  {/* ETF Option During Simulation */}
-                  {config.showETF && (
-                    <Card variant="highlighted">
-                      <CardContent className="p-6">
-                        <div className="flex items-start gap-4">
-                          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                            <PieChart className="h-7 w-7" />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-display font-semibold text-lg text-foreground mb-1">
-                              Diversified Bundle (ETF)
-                            </h3>
-                            <p className="text-sm text-muted-foreground mb-4">
-                              Automatically spreads your cash across all stocks equally — lower risk!
-                            </p>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Allocation</span>
-                                <span className="font-semibold text-foreground">${etfAllocation.toLocaleString()}</span>
-                              </div>
-                              <Slider
-                                value={[etfAllocation]}
-                                onValueChange={handleEtfChange}
-                                max={Math.max(10000, (etfAllocation || 0) + Math.max(0, cash) + 1000)}
-                                step={10}
-                                className="w-full"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-
-                {/* Main content */}
+                {/* Main content - Chart and News */}
                 <div className={`lg:col-span-2 grid gap-6 ${config.showNews ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}`}>
                   {/* Chart */}
                   <PortfolioChart data={portfolioHistory} startingValue={totalAllocated} />
@@ -1948,7 +2024,7 @@ const startSimulation = () => {
                   )}
                 </div>
 
-                {/* Sidebar with Goals */}
+                  {/* Sidebar with AI Assistant and Goals */}
                 <div className="space-y-6">
                   {/* AI Assistant */}
                   <SimulatorAI
@@ -2125,111 +2201,6 @@ const startSimulation = () => {
                                 </p>
                               </>
                             );
-                          case 8:
-                            return (
-                              <>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Goal:</strong> Adapt to conditions
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Duration:</strong> 30 days
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  Pass if:
-                                </p>
-                                <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li><strong className="text-success">Bull market</strong>: Portfolio ≥ <strong className="text-foreground">$11,200</strong></li>
-                                  <li><strong className="text-destructive">Bear market</strong>: Portfolio ≥ <strong className="text-foreground">$9,800</strong></li>
-                                </ul>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Note:</strong> Different goals for different realities.
-                                </p>
-                              </>
-                            );
-                          case 9:
-                            return (
-                              <>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Goal:</strong> Protect against big losses
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Duration:</strong> 35 days
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  Pass if:
-                                </p>
-                                <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Max drawdown ≤ <strong className="text-foreground">12%</strong></li>
-                                  <li>AND final portfolio ≥ <strong className="text-foreground">$10,500</strong></li>
-                                </ul>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Note:</strong> This is where players start thinking like pros.
-                                </p>
-                              </>
-                            );
-                          case 10:
-                            return (
-                              <>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Goal:</strong> Balance holding & adapting
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Duration:</strong> 40 days
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  Pass if:
-                                </p>
-                                <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Hold at least one stock ≥ <strong className="text-foreground">70%</strong> of level</li>
-                                  <li>Final portfolio ≥ <strong className="text-foreground">$11,100</strong></li>
-                                </ul>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Note:</strong> Rewards long-term conviction.
-                                </p>
-                              </>
-                            );
-                          case 11:
-                            return (
-                              <>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Goal:</strong> Recognize hidden underperformance
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Duration:</strong> 40 days
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  Pass if:
-                                </p>
-                                <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Portfolio ≥ <strong className="text-foreground">$11,000</strong></li>
-                                  <li>AND ETF underperformed your portfolio</li>
-                                </ul>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Note:</strong> Beating "safe" isn't easy.
-                                </p>
-                              </>
-                            );
-                          case 12:
-                            return (
-                              <>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Goal:</strong> Let compounding work
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Duration:</strong> 50 days
-                                </p>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  Pass if:
-                                </p>
-                                <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-                                  <li>Portfolio ≥ <strong className="text-foreground">$11,700</strong></li>
-                                  <li>AND outperform ETF by ≥ <strong className="text-foreground">2%</strong></li>
-                                </ul>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  <strong className="text-foreground">Note:</strong> This is the capstone level.
-                                </p>
-                              </>
-                            );
                           default:
                             return <p className="text-xs text-muted-foreground">Level {currentLevel} goals coming soon...</p>;
                         }
@@ -2239,59 +2210,397 @@ const startSimulation = () => {
                   </div>
                 </div>
 
-                {/* Stock prices - spans full width below grid */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Current Stock Prices</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      {levelCompanies.map(company => {
-                        const currentPrice = stockPrices[company.id];
-                        const change = currentPrice - company.currentValue;
-                        const changePercent = ((change / company.currentValue) * 100).toFixed(1);
-                        const isUp = change >= 0;
+                {/* Trading Controls During Simulation */}
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-display text-xl font-semibold text-foreground">
+                      Trade Stocks (Day {currentDay})
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Buy/sell at current market prices
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {levelCompanies.map((company) => {
+                      const currentPrice = stockPrices[company.id] || company.currentValue;
+                      const priceChange = currentPrice - company.currentValue;
+                      const priceChangePercent = company.currentValue > 0 
+                        ? ((priceChange / company.currentValue) * 100).toFixed(2)
+                        : "0.00";
                         const Icon = company.icon;
                         
-                        // Check if news affects this stock today
-                        const todayNews = news.find(n => n.day === currentDay);
-                        const isAffected = todayNews && todayNews.affectedStocks.includes(company.name);
-                        const newsImpact = todayNews?.impact || "neutral";
-                        
                         return (
-                          <div 
-                            key={company.id} 
-                            className={`flex items-center gap-3 p-3 rounded-lg bg-muted/50 transition-colors ${
-                              isAffected && newsImpact === "positive" ? "bg-success/10 border border-success/30" :
-                              isAffected && newsImpact === "negative" ? "bg-destructive/10 border border-destructive/30" :
-                              ""
-                            }`}
-                          >
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-card">
-                              <Icon className="h-5 w-5 text-muted-foreground" />
+                        <Card key={company.id} variant="interactive">
+                          <CardContent className="p-5">
+                            <div className="flex items-start gap-3 mb-4">
+                              <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-accent-lighter text-accent`}>
+                                <Icon className="h-6 w-6" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm text-foreground">{company.ticker}</p>
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">${currentPrice.toFixed(0)}</span>
-                                <span className={`text-xs flex items-center ${isUp ? "text-success" : "text-destructive"}`}>
-                                  {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                                  {isUp ? "+" : ""}{changePercent}%
+                                  <h3 className="font-display font-semibold text-foreground">{company.name}</h3>
+                                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{company.ticker}</span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-sm font-semibold text-foreground">${currentPrice.toFixed(2)}</span>
+                                  <span className={`text-xs ${priceChange >= 0 ? "text-success" : "text-destructive"}`}>
+                                    {priceChange >= 0 ? "↑" : "↓"} {Math.abs(parseFloat(priceChangePercent))}%
                                 </span>
                               </div>
                             </div>
                           </div>
-                        );
-                      })}
+
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Your allocation</span>
+                                <span className="font-semibold text-foreground">${(() => {
+                                  const originalAllocation = allocations[company.id] || 0;
+                                  if (simulationStarted && originalAllocation > 0) {
+                                    // During simulation: show current value based on price changes
+                                    const priceRatio = currentPrice / company.currentValue;
+                                    const currentValue = Math.round(originalAllocation * priceRatio * 100) / 100;
+                                    return currentValue.toFixed(2);
+                                  } else {
+                                    // Before simulation: show original allocation
+                                    return originalAllocation.toLocaleString();
+                                  }
+                                })()}</span>
+                              </div>
+                              
+                              {/* Input field for direct amount entry */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">$</span>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max={(() => {
+                                    if (simulationStarted) {
+                                      // During simulation: calculate max allocation you can have
+                                      // Allow typing any reasonable number (don't restrict with HTML max)
+                                      // Validation happens in handleAllocationChange based on available cash
+                                      return 999999999;
+                                    } else {
+                                      // Before simulation: max is calculated from available money
+                                      const STARTING_CASH = 10000;
+                                      const currentAllocation = allocations[company.id] || 0;
+                                      const otherStockAllocations = Object.entries(allocations)
+                                        .filter(([id]) => id !== company.id)
+                                        .reduce((sum, [, val]) => sum + (val || 0), 0);
+                                      return currentAllocation + (STARTING_CASH - otherStockAllocations - (etfAllocation || 0));
+                                    }
+                                  })()}
+                                  value={
+                                    focusedInputs[company.id] 
+                                      ? (inputValues[company.id] ?? (() => {
+                                          const originalAllocation = allocations[company.id] || 0;
+                                          if (simulationStarted && originalAllocation > 0) {
+                                            const priceRatio = currentPrice / company.currentValue;
+                                            return (Math.round(originalAllocation * priceRatio * 100) / 100).toFixed(2);
+                                          }
+                                          return originalAllocation === 0 ? "" : originalAllocation.toString();
+                                        })())
+                                      : (() => {
+                                          const originalAllocation = allocations[company.id] || 0;
+                                          if (simulationStarted && originalAllocation > 0) {
+                                            const priceRatio = currentPrice / company.currentValue;
+                                            return (Math.round(originalAllocation * priceRatio * 100) / 100).toFixed(2);
+                                          }
+                                          return originalAllocation === 0 ? "" : originalAllocation.toString();
+                                        })()
+                                  }
+                                  onChange={(e) => {
+                                    const inputValue = e.target.value;
+                                    const companyId = company.id;
+                                    
+                                    // Update local input state to allow free typing
+                                    setInputValues(prev => ({ ...prev, [companyId]: inputValue }));
+                                    
+                                    if (simulationStarted) {
+                                      // During simulation: allow free typing, don't cap yet
+                                      // Validation and capping will happen on blur
+                                      return;
+                                    } else {
+                                      // Before simulation: validate against $10,000 total limit in real-time
+                                      if (inputValue === "" || inputValue === "-") {
+                                        handleAllocationChange(companyId, [0]);
+                                        return;
+                                      }
+                                      const value = parseFloat(inputValue) || 0;
+                                      const roundedValue = Math.max(0, Math.round(value));
+                                      const STARTING_CASH = 10000;
+                                      const otherStockAllocations = Object.entries(allocations)
+                                        .filter(([id]) => id !== company.id)
+                                        .reduce((sum, [, val]) => sum + (val || 0), 0);
+                                      const totalAllocation = roundedValue + otherStockAllocations + (etfAllocation || 0);
+                                      
+                                      // Cap to ensure total doesn't exceed $10,000
+                                      let cappedValue = roundedValue;
+                                      if (totalAllocation > STARTING_CASH + 0.01) {
+                                        const maxValue = STARTING_CASH - otherStockAllocations - (etfAllocation || 0);
+                                        cappedValue = Math.max(0, Math.round(maxValue));
+                                      }
+                                      
+                                      handleAllocationChange(companyId, [cappedValue]);
+                                    }
+                                  }}
+                                  onFocus={(e) => {
+                                    const companyId = company.id;
+                                    setFocusedInputs(prev => ({ ...prev, [companyId]: true }));
+                                    // If value is 0, select all so user can type to replace it
+                                    if (e.target.value === "0") {
+                                      e.target.select();
+                                    }
+                                  }}
+                                  onBlur={(e) => {
+                                    const companyId = company.id;
+                                    setFocusedInputs(prev => ({ ...prev, [companyId]: false }));
+                                    const inputValue = e.target.value;
+                                    
+                                    // If input is empty, set to 0
+                                    if (inputValue === "" || inputValue === "-") {
+                                      handleAllocationChange(companyId, [0]);
+                                      setInputValues(prev => ({ ...prev, [companyId]: "" }));
+                                      return;
+                                    }
+                                    
+                                    const value = parseFloat(inputValue) || 0;
+                                    
+                                    if (simulationStarted) {
+                                      // During simulation: user types desired current value (what they see)
+                                      // But allocations are stored as "original dollars" (amount at original price)
+                                      
+                                      // Get current state
+                                      const currentAllocation = allocationsRef.current[company.id] || 0; // original dollars
+                                      const latestCash = cashRef.current; // available cash
+                                      const priceRatio = currentPrice / company.currentValue;
+                                      
+                                      // User's current value = currentAllocation * priceRatio
+                                      const currentCurrentValue = Math.round(currentAllocation * priceRatio * 100) / 100;
+                                      
+                                      // How much current value user wants to buy = desired - current
+                                      const desiredCurrentValueIncrease = Math.max(0, value - currentCurrentValue);
+                                      
+                                      // Cost in cash to buy this increase = desiredCurrentValueIncrease
+                                      // (because you pay current price for current value)
+                                      
+                                      // CRITICAL: Simple limit - you can only buy what you have cash for
+                                      // Cap the increase to available cash (with small tolerance for rounding)
+                                      const maxCurrentValueIncrease = Math.max(0, latestCash);
+                                      let cappedCurrentValueIncrease = Math.min(desiredCurrentValueIncrease, maxCurrentValueIncrease);
+                                      
+                                      // Round to 2 decimal places to avoid precision issues
+                                      cappedCurrentValueIncrease = Math.round(cappedCurrentValueIncrease * 100) / 100;
+                                      
+                                      // Final desired current value
+                                      const finalCurrentValue = currentCurrentValue + cappedCurrentValueIncrease;
+                                      
+                                      // Convert back to original dollars for storage
+                                      const finalOriginalAllocation = priceRatio > 0 ? finalCurrentValue / priceRatio : currentAllocation;
+                                      
+                                      // Round to 2 decimal places
+                                      let roundedOriginalAllocation = Math.round(finalOriginalAllocation * 100) / 100;
+                                      
+                                      // DOUBLE-CHECK: After rounding, recalculate the cost to ensure it doesn't exceed cash
+                                      const allocationDifference = roundedOriginalAllocation - currentAllocation;
+                                      const actualCostAfterRounding = Math.round(allocationDifference * priceRatio * 100) / 100;
+                                      
+                                      // If rounding caused cost to exceed cash, reduce the allocation
+                                      if (actualCostAfterRounding > latestCash + 0.01) {
+                                        // Reduce the capped increase to account for rounding errors
+                                        const safeCurrentValueIncrease = Math.max(0, latestCash - 0.01); // Slight buffer for rounding
+                                        const safeFinalCurrentValue = currentCurrentValue + safeCurrentValueIncrease;
+                                        roundedOriginalAllocation = priceRatio > 0 ? Math.round((safeFinalCurrentValue / priceRatio) * 100) / 100 : currentAllocation;
+                                      }
+                                      
+                                      // Recalculate final current value for display based on rounded original
+                                      const finalDisplayCurrentValue = Math.round(roundedOriginalAllocation * priceRatio * 100) / 100;
+                                      
+                                      // Update display with final current value
+                                      setInputValues(prev => ({ ...prev, [companyId]: finalDisplayCurrentValue.toFixed(2) }));
+                                      
+                                      // Pass original allocation to handleAllocationChange
+                                      handleAllocationChange(companyId, [roundedOriginalAllocation]);
+                                    }
+                                  }}
+                                  className="flex-1"
+                                  placeholder="0"
+                                />
+                              </div>
+                              
+                              <Slider
+                                key={`slider-${company.id}-${currentDay}`}
+                                value={[allocations[company.id] || 0]}
+                                onValueChange={(value) => {
+                                  const companyId = company.id;
+                                  const newValue = value[0] || 0;
+                                  
+                                  if (!simulationStarted) {
+                                    // Before simulation: validate against total $10,000 limit
+                                    const STARTING_CASH = 10000;
+                                    const otherStockAllocations = Object.entries(allocations)
+                                      .filter(([id]) => id !== companyId)
+                                      .reduce((sum, [, val]) => sum + (val || 0), 0);
+                                    const totalAllocation = newValue + otherStockAllocations + (etfAllocation || 0);
+                                    
+                                    // Cap the value to ensure total doesn't exceed $10,000
+                                    let cappedValue = newValue;
+                                    if (totalAllocation > STARTING_CASH + 0.01) {
+                                      // Calculate maximum allowed for this stock
+                                      cappedValue = Math.max(0, Math.round(STARTING_CASH - otherStockAllocations - (etfAllocation || 0)));
+                                    }
+                                    
+                                    // Update with capped value
+                                    handleAllocationChange(companyId, [cappedValue]);
+                                  } else {
+                                    // During simulation: cap to what you can afford based on available cash
+                                    // Use allocationsRef to get the latest allocation value (not stale closure)
+                                    const currentAllocation = allocationsRef.current[company.id] || 0;
+                                    const priceRatio = currentPrice / company.currentValue;
+                                    
+                                    // Use cashRef to get the latest cash value (not stale closure)
+                                    const latestCash = cashRef.current;
+                                    
+                                    // Calculate how much you can buy in original dollars
+                                    // Convert available cash to original dollars at current prices
+                                    const cashInOriginalDollars = priceRatio > 0 ? latestCash / priceRatio : 0;
+                                    
+                                    // Maximum allocation is: current allocation + what you can buy with all cash
+                                    // But we need to ensure the cost doesn't exceed available cash
+                                    // Calculate the maximum new allocation that can be afforded
+                                    let maxAffordableAllocation = currentAllocation + cashInOriginalDollars;
+                                    
+                                    // Double-check: ensure that buying maxAffordableAllocation doesn't exceed cash
+                                    // Calculate the cost of buying maxAffordableAllocation
+                                    const allocationToBuy = maxAffordableAllocation - currentAllocation;
+                                    const costOfMaxAllocation = Math.round((allocationToBuy * priceRatio) * 100) / 100;
+                                    
+                                    // If cost exceeds cash, reduce maxAffordableAllocation
+                                    if (costOfMaxAllocation > latestCash + 0.01) {
+                                      // Recalculate: what's the max allocation we can afford?
+                                      const maxAffordableInOriginalDollars = latestCash / priceRatio;
+                                      maxAffordableAllocation = currentAllocation + maxAffordableInOriginalDollars;
+                                    }
+                                    
+                                    // Calculate the difference - if buying, cap to what you can afford
+                                    const allocationDifference = newValue - currentAllocation;
+                                    
+                                    if (allocationDifference > 0) {
+                                      // Buying: cap to what you can afford
+                                      // Use Math.round to allow full use of available cash
+                                      const roundedValue = Math.round(newValue);
+                                      const cappedValue = Math.min(roundedValue, Math.round(maxAffordableAllocation));
+                                      handleAllocationChange(companyId, [cappedValue]);
+                                    } else {
+                                      // Selling or no change: allow the value as-is (selling is always valid)
+                                      const roundedValue = Math.round(newValue);
+                                      handleAllocationChange(companyId, [roundedValue]);
+                                    }
+                                  }
+                                }}
+                                max={(() => {
+                                  if (simulationStarted) {
+                                    // During simulation: calculate max allocation you can have
+                                    // You can keep current allocation + buy more with all available cash
+                                    // Use allocationsRef to get the latest allocation value (not stale closure)
+                                    const currentAllocation = allocationsRef.current[company.id] || 0;
+                                    const priceRatio = currentPrice / company.currentValue;
+                                    
+                                    // Use cashRef to get the latest cash value (not stale closure)
+                                    const latestCash = cashRef.current;
+                                    
+                                    // Convert available cash to original dollars at current prices
+                                    // This is how much you can buy in original dollars
+                                    const cashInOriginalDollars = priceRatio > 0 ? latestCash / priceRatio : 0;
+                                    
+                                    // Max is: current allocation + what you can buy with all cash
+                                    // But ensure the cost doesn't exceed available cash
+                                    let maxAffordableAllocation = currentAllocation + cashInOriginalDollars;
+                                    
+                                    // Double-check: ensure that buying maxAffordableAllocation doesn't exceed cash
+                                    const allocationToBuy = maxAffordableAllocation - currentAllocation;
+                                    const costOfMaxAllocation = Math.round((allocationToBuy * priceRatio) * 100) / 100;
+                                    
+                                    // If cost exceeds cash, reduce maxAffordableAllocation
+                                    if (costOfMaxAllocation > latestCash + 0.01) {
+                                      const maxAffordableInOriginalDollars = latestCash / priceRatio;
+                                      maxAffordableAllocation = currentAllocation + maxAffordableInOriginalDollars;
+                                    }
+                                    
+                                    // Round up to allow full use of available cash (no artificial limits)
+                                    const maxValue = Math.ceil(maxAffordableAllocation);
+                                    // Add a small buffer (100) for easier dragging, but don't exceed what you can afford
+                                    // The onValueChange handler will cap it to what you can actually afford
+                                    return maxValue + 100;
+                                    } else {
+                                      // Before simulation: enforce $10,000 total limit
+                                      const STARTING_CASH = 10000;
+                                      const currentAllocation = allocations[company.id] || 0;
+                                      const otherStockAllocations = Object.entries(allocations)
+                                        .filter(([id]) => id !== company.id)
+                                        .reduce((sum, [, val]) => sum + (val || 0), 0);
+                                      // Max is: current allocation + remaining cash that doesn't exceed $10,000 total
+                                      const maxAvailable = currentAllocation + (STARTING_CASH - otherStockAllocations - (etfAllocation || 0));
+                                      // Cap at $10,000 total - don't allow values above remaining cash
+                                      return Math.max(0, Math.min(10000, Math.ceil(maxAvailable)));
+                                    }
+                                })()}
+                                step={50}
+                                className="w-full"
+                              />
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span className={company.riskLevel === "low" ? "text-success" : company.riskLevel === "medium" ? "text-warning" : "text-destructive"}>
+                                  Risk: {company.riskLevel}
+                                </span>
+                                <span>Original: ${company.currentValue}</span>
+                              </div>
                     </div>
                   </CardContent>
                 </Card>
+                      );
+                    })}
+                  </div>
 
-                {/* Completion message */}
-                {currentDay >= config.maxDays && (
-                  <Card className={`border-2 ${hasWon ? "border-success/30" : "border-destructive/30"}`}>
+                  {/* ETF Option During Simulation */}
+                  {config.showETF && (
+                    <Card variant="highlighted">
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                            <PieChart className="h-7 w-7" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-display font-semibold text-lg text-foreground mb-1">
+                              Diversified Bundle (ETF)
+                            </h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                              Automatically spreads your cash across all stocks equally — lower risk!
+                            </p>
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Allocation</span>
+                                <span className="font-semibold text-foreground">${etfAllocation.toLocaleString()}</span>
+                              </div>
+                              <Slider
+                                value={[etfAllocation]}
+                                onValueChange={handleEtfChange}
+                                max={Math.max(10000, (etfAllocation || 0) + Math.max(0, cash) + 1000)}
+                                step={10}
+                                className="w-full"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Completion Dialog */}
+                <Dialog open={currentDay >= config.maxDays && showCompletionDialog} onOpenChange={setShowCompletionDialog}>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-3">
                         <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${hasWon ? "bg-success/20" : "bg-destructive/20"}`}>
                           {hasWon ? (
                             <CheckCircle2 className="h-6 w-6 text-success" />
@@ -2300,12 +2609,15 @@ const startSimulation = () => {
                           )}
                         </div>
                         <div>
-                          <h3 className="font-display font-semibold text-lg text-foreground mb-2">
+                          <h3 className="font-display font-semibold text-lg text-foreground">
                             {hasWon ? "Level Complete! 🎉" : "Level Not Passed"}
                           </h3>
-                          <div className="text-muted-foreground space-y-2">
+                        </div>
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="text-muted-foreground space-y-3 py-4">
                             <p>
-                              You started with <strong>${totalAllocated}</strong> and ended with <strong>${finalValue}</strong>.
+                        You started with <strong className="text-foreground">${totalAllocated}</strong> and ended with <strong className="text-foreground">${finalValue}</strong>.
                             </p>
                             {currentLevel === 2 && (
                               <div className="bg-muted/50 p-3 rounded-lg text-sm space-y-1">
@@ -2331,13 +2643,24 @@ const startSimulation = () => {
                             {hasWon ? (
                               <>
                                 <p>Great job! You've learned: {config.description}</p>
-                                {currentLevel < 5 && (
+                          {currentLevel < 7 ? (
                                   <Button 
                                     variant="hero" 
-                                    className="mt-4"
-                                    onClick={() => selectLevel((currentLevel + 1) as Level)}
+                              className="w-full mt-4"
+                              onClick={() => {
+                                setShowCompletionDialog(false);
+                                selectLevel((currentLevel + 1) as Level);
+                              }}
                                   >
                                     Continue to Level {currentLevel + 1}
+                                  </Button>
+                          ) : (
+                            <Button 
+                              variant="hero" 
+                              className="w-full mt-4"
+                              onClick={() => setShowCompletionDialog(false)}
+                            >
+                              Close
                                   </Button>
                                 )}
                               </>
@@ -2349,14 +2672,18 @@ const startSimulation = () => {
                                     Strategy tip: Pay attention to news headlines. Stocks with positive news tend to go up, while negative news causes drops. Try to invest more in stocks with positive news!
                             </p>
                                 )}
+                          <Button 
+                            variant="outline" 
+                            className="w-full mt-4"
+                            onClick={() => setShowCompletionDialog(false)}
+                          >
+                            Close
+                          </Button>
                               </div>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
           </div>
@@ -2371,14 +2698,31 @@ function CompanyCard({
   company, 
   allocation, 
   maxCash,
+  maxAvailable,
+  allocations,
+  etfAllocation,
   onAllocationChange 
 }: { 
   company: typeof allCompanies[0]; 
   allocation: number;
   maxCash: number;
+  maxAvailable: number;
+  allocations: Record<string, number>;
+  etfAllocation: number;
   onAllocationChange: (value: number[]) => void;
 }) {
   const Icon = company.icon;
+  // Track the raw input value to allow decimal typing
+  const [inputValue, setInputValue] = useState<string>(allocation === 0 ? "" : allocation.toString());
+  const [isFocused, setIsFocused] = useState(false);
+  
+  // Sync input value when allocation changes from outside (e.g., slider)
+  // But only if the input is not currently focused (user not typing)
+  useEffect(() => {
+    if (!isFocused) {
+      setInputValue(allocation === 0 ? "" : allocation.toString());
+    }
+  }, [allocation, isFocused]);
   
   const colorClasses: Record<string, string> = {
     primary: "bg-accent-lighter text-accent",
@@ -2416,10 +2760,121 @@ function CompanyCard({
             <span className="text-muted-foreground">Your allocation</span>
             <span className="font-semibold text-foreground">${allocation}</span>
           </div>
+          
+          {/* Input field for direct amount entry */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">$</span>
+            <Input
+              type="number"
+              min="0"
+              max={maxAvailable}
+              value={inputValue}
+              onChange={(e) => {
+                const newInputValue = e.target.value;
+                
+                // If input is empty or just "-", allow it
+                if (newInputValue === "" || newInputValue === "-") {
+                  setInputValue(newInputValue);
+                  return;
+                }
+                
+                // Parse the value to check if it would exceed the limit
+                const value = parseFloat(newInputValue);
+                
+                // If not a valid number, don't update
+                if (isNaN(value) || value < 0) {
+                  return;
+                }
+                
+                // CRITICAL: Validate against total $10,000 limit in real-time
+                const STARTING_CASH = 10000;
+                const otherStockAllocations = Object.entries(allocations)
+                  .filter(([id]) => id !== company.id)
+                  .reduce((sum, [, val]) => sum + (val || 0), 0);
+                const totalAllocation = value + otherStockAllocations + (etfAllocation || 0);
+                
+                // Calculate maximum allowed for this stock
+                const maxAllowed = STARTING_CASH - otherStockAllocations - (etfAllocation || 0);
+                
+                // If the value would exceed the limit, cap it to the maximum allowed
+                if (totalAllocation > STARTING_CASH + 0.01) {
+                  // Cap to max allowed value
+                  const cappedValue = Math.max(0, maxAllowed);
+                  setInputValue(cappedValue.toString());
+                  return;
+                }
+                
+                // Update local state to show what user is typing (allows decimals)
+                // Don't update allocation yet - wait for blur to round and validate
+                setInputValue(newInputValue);
+              }}
+              onBlur={(e) => {
+                setIsFocused(false);
+                // When user finishes typing, round the final value
+                const inputValue = e.target.value;
+                if (inputValue === "" || inputValue === "-") {
+                  setInputValue("");
+                  onAllocationChange([0]);
+                  return;
+                }
+                
+                const value = parseFloat(inputValue) || 0;
+                const roundedValue = Math.max(0, Math.round(value));
+                
+                // CRITICAL: Validate against total $10,000 limit
+                const STARTING_CASH = 10000;
+                const otherStockAllocations = Object.entries(allocations)
+                  .filter(([id]) => id !== company.id)
+                  .reduce((sum, [, val]) => sum + (val || 0), 0);
+                const totalAllocation = roundedValue + otherStockAllocations + (etfAllocation || 0);
+                
+                // Cap the value to ensure total doesn't exceed $10,000
+                let cappedValue = roundedValue;
+                if (totalAllocation > STARTING_CASH + 0.01) {
+                  // Calculate maximum allowed for this stock
+                  cappedValue = Math.max(0, Math.round(STARTING_CASH - otherStockAllocations - (etfAllocation || 0)));
+                }
+                
+                // Update both local state and allocation with final rounded value
+                const finalValue = cappedValue === 0 ? "" : cappedValue.toString();
+                setInputValue(finalValue);
+                onAllocationChange([cappedValue]);
+              }}
+              onFocus={(e) => {
+                setIsFocused(true);
+                // If value is 0, select all so user can type to replace it
+                if (e.target.value === "0") {
+                  e.target.select();
+                }
+              }}
+              className="flex-1"
+              placeholder="0"
+            />
+          </div>
+          
           <Slider
             value={[allocation]}
-            onValueChange={onAllocationChange}
-            max={maxCash}
+            onValueChange={(value) => {
+              const newValue = value[0] || 0;
+              
+              // CRITICAL: Validate against total $10,000 limit
+              const STARTING_CASH = 10000;
+              const otherStockAllocations = Object.entries(allocations)
+                .filter(([id]) => id !== company.id)
+                .reduce((sum, [, val]) => sum + (val || 0), 0);
+              const totalAllocation = newValue + otherStockAllocations + (etfAllocation || 0);
+              
+              // Cap the value to ensure total doesn't exceed $10,000
+              let cappedValue = newValue;
+              if (totalAllocation > STARTING_CASH + 0.01) {
+                // Calculate maximum allowed for this stock
+                cappedValue = Math.max(0, Math.round(STARTING_CASH - otherStockAllocations - (etfAllocation || 0)));
+              }
+              
+              // Only update if value is within limit
+              onAllocationChange([cappedValue]);
+            }}
+            max={maxAvailable}
             step={10}
             className="w-full"
           />
