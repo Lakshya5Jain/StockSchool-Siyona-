@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -13,6 +13,8 @@ import {
 import { LessonQuiz, QuizQuestion } from "@/components/learn/LessonQuiz";
 import { callOpenAI } from "@/lib/openai";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { markLessonComplete } from "@/lib/progressStorage";
 
 const lessonsContent: Record<string, {
   icon: React.ElementType;
@@ -972,12 +974,12 @@ const LessonDetail = () => {
   const isLastSection = currentSection === lesson.sections.length - 1;
 
   const colorClasses: Record<string, string> = {
-    primary: "bg-primary-light text-primary",
-    secondary: "bg-secondary-light text-secondary",
+    primary: "bg-accent-lighter text-accent",
+    secondary: "bg-accent-lighter text-accent",
     accent: "bg-accent-lighter text-accent",
-    success: "bg-success-light text-success",
-    warning: "bg-warning-light text-warning",
-    destructive: "bg-destructive/10 text-destructive",
+    success: "bg-accent-lighter text-accent",
+    warning: "bg-accent-lighter text-accent",
+    destructive: "bg-accent-lighter text-accent",
   };
 
   const handleSubmitAnswer = async () => {
@@ -1022,15 +1024,27 @@ Please provide brief, encouraging feedback on this answer. Focus on whether they
     }
   };
 
+  const { user } = useAuth();
+
   const handleQuizComplete = () => {
     setQuizComplete(true);
     setShowQuiz(false);
+    // Mark lesson as complete for logged-in users
+    if (user && lessonId) {
+      markLessonComplete(user.id, lessonId);
+    }
   };
 
   // Determine which lessons are available
-  const lessonIds = Object.keys(lessonsContent);
-  const currentIndex = lessonIds.indexOf(lessonId || "");
-  const nextLessonId = currentIndex < lessonIds.length - 1 ? lessonIds[currentIndex + 1] : null;
+  // Use the correct lesson order from the lessons array in Learn.tsx
+  const lessonOrder = [
+    "investing", "company", "stock", "marketcap", "diversification", "etf",
+    "longterm", "exchange", "dividends", "marketmovements", "economy", "risk",
+    "compound", "savings", "news", "portfolio", "rebalancing", "responsible", "notinvesting"
+  ];
+  const currentIndex = lessonOrder.indexOf(lessonId || "");
+  const lessonNumber = currentIndex >= 0 ? currentIndex + 1 : null;
+  const nextLessonId = currentIndex < lessonOrder.length - 1 ? lessonOrder[currentIndex + 1] : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -1139,10 +1153,15 @@ Please provide brief, encouraging feedback on this answer. Focus on whether they
                     <Icon className="h-8 w-8" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{lesson.title}</p>
-                    <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-                      {section.title}
+                    {lessonNumber && (
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Lesson {lessonNumber}</p>
+                    )}
+                    <h1 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-2">
+                      {lesson.title}
                     </h1>
+                    <h2 className="font-display text-xl md:text-2xl font-semibold text-foreground text-muted-foreground">
+                      {section.title}
+                    </h2>
                   </div>
                 </div>
 

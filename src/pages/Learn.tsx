@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AITutor } from "@/components/learn/AITutor";
+import { useAuth } from "@/contexts/AuthContext";
+import { loadProgress } from "@/lib/progressStorage";
 
 const lessons = [
   // Beginner Level - Fundamentals
@@ -229,13 +231,23 @@ const lessons = [
 
 const Learn = () => {
   const [selectedLesson, setSelectedLesson] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [completedLessons, setCompletedLessons] = useState<string[]>([]);
+
+  // Load progress on mount
+  useEffect(() => {
+    if (user) {
+      const progress = loadProgress(user.id);
+      setCompletedLessons(progress.completedLessons);
+    }
+  }, [user]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       <main className="flex-1">
         {/* Hero */}
-        <section className="bg-gradient-hero py-12 md:py-16">
+        <section className="bg-gradient-hero py-6 md:py-8">
           <div className="container">
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full bg-accent-lighter px-4 py-2 text-sm font-medium text-accent-dark mb-4">
@@ -254,7 +266,7 @@ const Learn = () => {
         </section>
 
         {/* Content */}
-        <section className="py-12">
+        <section className="py-6">
           <div className="container">
             <Tabs defaultValue="lessons" className="space-y-8">
               <TabsList className="grid w-full max-w-md grid-cols-2">
@@ -275,11 +287,13 @@ const Learn = () => {
                     <h2 className="font-display text-xl font-semibold text-foreground mb-4">
                       Choose a Lesson
                     </h2>
-                    {lessons.map((lesson) => (
+                    {lessons.map((lesson, index) => (
                       <LessonCard
                         key={lesson.id}
                         lesson={lesson}
+                        lessonNumber={index + 1}
                         isSelected={selectedLesson === lesson.id}
+                        isCompleted={completedLessons.includes(lesson.id)}
                         onSelect={() => setSelectedLesson(lesson.id)}
                       />
                     ))}
@@ -288,7 +302,8 @@ const Learn = () => {
                   {/* Lesson Preview */}
                   <div className="lg:sticky lg:top-24 h-fit">
                     <LessonPreview 
-                      lesson={lessons.find(l => l.id === selectedLesson)} 
+                      lesson={lessons.find(l => l.id === selectedLesson)}
+                      lessonNumber={selectedLesson ? lessons.findIndex(l => l.id === selectedLesson) + 1 : undefined}
                     />
                   </div>
                 </div>
@@ -354,11 +369,15 @@ const Learn = () => {
 
 function LessonCard({ 
   lesson, 
-  isSelected, 
+  lessonNumber,
+  isSelected,
+  isCompleted,
   onSelect 
 }: { 
   lesson: typeof lessons[0]; 
+  lessonNumber: number;
   isSelected: boolean;
+  isCompleted: boolean;
   onSelect: () => void;
 }) {
   const Icon = lesson.icon;
@@ -385,10 +404,11 @@ function LessonCard({
           
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-semibold text-muted-foreground">Lesson {lessonNumber}</span>
               <h3 className="font-display font-semibold text-foreground truncate">
                 {lesson.title}
               </h3>
-              {lesson.completed && (
+              {isCompleted && (
                 <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0" />
               )}
               {lesson.locked && (
@@ -408,7 +428,7 @@ function LessonCard({
   );
 }
 
-function LessonPreview({ lesson }: { lesson?: typeof lessons[0] }) {
+function LessonPreview({ lesson, lessonNumber }: { lesson?: typeof lessons[0]; lessonNumber?: number }) {
   if (!lesson) {
     return (
       <Card variant="glass" className="h-96 flex items-center justify-center">
@@ -435,6 +455,9 @@ function LessonPreview({ lesson }: { lesson?: typeof lessons[0] }) {
         <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-accent-lighter text-accent mb-4">
           <Icon className="h-7 w-7" />
         </div>
+        {lessonNumber && (
+          <p className="text-sm font-medium text-muted-foreground mb-1">Lesson {lessonNumber}</p>
+        )}
         <CardTitle className="text-2xl">{lesson.title}</CardTitle>
         <CardDescription className="text-base">{lesson.description}</CardDescription>
       </CardHeader>

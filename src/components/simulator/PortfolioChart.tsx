@@ -18,8 +18,8 @@ export function PortfolioChart({ data, startingValue }: PortfolioChartProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg">Portfolio Value</CardTitle>
-            <CardDescription>Track how your tokens change over time</CardDescription>
+            <CardTitle className="text-lg">Current Investment Value</CardTitle>
+            <CardDescription>Track how your money changes over time</CardDescription>
           </div>
           <div className="text-right">
             <p className="font-display text-2xl font-bold text-foreground">

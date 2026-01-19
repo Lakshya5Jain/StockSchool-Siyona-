@@ -11,12 +11,14 @@ import {
   Zap, Gamepad2, AlertCircle, Lock, CheckCircle2,
   RefreshCw, Sparkles, ArrowRight, PieChart, Play, Pause,
   Smartphone, Car, Cpu, Building2, Globe, ShoppingCart, MessageCircle,
-  Briefcase, Wallet, Pill, Store, Film, CreditCard
+  Briefcase, Wallet, Pill, Store, Film, CreditCard, ChevronRight
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { PortfolioChart } from "@/components/simulator/PortfolioChart";
 import { NewsSection, NewsItem } from "@/components/simulator/NewsSection";
 import { SimulatorAI } from "@/components/simulator/SimulatorAI";
+import { useAuth } from "@/contexts/AuthContext";
+import { loadProgress, markLevelComplete } from "@/lib/progressStorage";
 
 // All available stocks
 const allCompanies = [
@@ -349,10 +351,20 @@ type Level = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 const Simulator = () => {
   // Level management
+  const { user } = useAuth();
   const [currentLevel, setCurrentLevel] = useState<Level>(1);
+  const [selectedLevel, setSelectedLevel] = useState<Level | null>(null);
   const [completedLevels, setCompletedLevels] = useState<Level[]>([]);
-  const [showLevelSelect, setShowLevelSelect] = useState(false);
+  const [showLevelSelect, setShowLevelSelect] = useState(true); // Default to showing level selection
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+
+  // Load progress on mount
+  useEffect(() => {
+    if (user) {
+      const progress = loadProgress(user.id);
+      setCompletedLevels(progress.completedLevels as Level[]);
+    }
+  }, [user]);
 
   // Game state
   const [cash, setCash] = useState(10000);
@@ -525,12 +537,18 @@ const Simulator = () => {
       // Use functional updates to read current allocation atomically
       // This ensures we always use the latest values, even during rapid slider movements
       setAllocations(prevAllocs => {
-        // CRITICAL: Round currentAllocation to 2 decimals to ensure precision consistency
-        // This prevents floating point drift when calculating differences
+        // CRITICAL: Use prevAllocs (committed state) as the source of truth for current allocation
+        // React guarantees that prevAllocs is the result of all previous updates in the queue
+        // This prevents race conditions during rapid slider movements
         const currentAllocation = Math.round((prevAllocs[companyId] || 0) * 100) / 100;
-        const allocationDifference = newValue - currentAllocation;
         
-        // If no change, don't update anything
+        // CRITICAL: Round newValue to match stored precision exactly
+        // This ensures that if newValue equals currentAllocation (within rounding), we detect no change
+        const roundedNewValue = Math.round(newValue * 100) / 100;
+        const allocationDifference = roundedNewValue - currentAllocation;
+        
+        // If no change (within rounding tolerance), don't update anything
+        // This prevents unnecessary updates during rapid slider movements
         if (Math.abs(allocationDifference) < 0.01) {
           return prevAllocs;
         }
@@ -540,6 +558,7 @@ const Simulator = () => {
           // CRITICAL: Calculate cost using exact same method that will be used when selling
           // This ensures buy/sell symmetry on the same day (no cash drift)
           // Round allocation difference first, then multiply by price ratio and round again
+          // Use roundedNewValue to ensure consistency
           const roundedAllocationDifference = Math.round(allocationDifference * 100) / 100;
           const costAtCurrentPrice = Math.round((roundedAllocationDifference * priceRatio) * 100) / 100;
           
@@ -561,7 +580,9 @@ const Simulator = () => {
               const currentPortfolioValue = calculatePortfolioValue(stockPrices);
               const totalPortfolioValue = prevCash + currentPortfolioValue;
               const maxSingleStockAllocation = totalPortfolioValue * 0.40;
-              const newAllocationValue = newValue * priceRatio;
+              // Use the final stored allocation value for the check (what we'll actually store)
+              const finalStoredAllocationForCheck = Math.round((currentAllocation + roundedAllocationDifference) * 100) / 100;
+              const newAllocationValue = finalStoredAllocationForCheck * priceRatio;
               
               if (newAllocationValue > maxSingleStockAllocation + 0.01) {
                 return prevCash; // Don't allow allocation if it exceeds 40%
@@ -583,8 +604,13 @@ const Simulator = () => {
             return newCash;
           });
           
+          // CRITICAL: Store the allocation value that matches the cash transaction exactly
+          // To ensure buy/sell symmetry, we must store: currentAllocation + roundedAllocationDifference
+          // This ensures that when we sell, we get back exactly what we calculated
+          const finalStoredAllocation = Math.round((currentAllocation + roundedAllocationDifference) * 100) / 100;
+          
           // Only update allocations if we passed the cash check above
-          const newAllocs = { ...prevAllocs, [companyId]: newValue };
+          const newAllocs = { ...prevAllocs, [companyId]: finalStoredAllocation };
           // Update allocationsRef immediately to keep it in sync
           allocationsRef.current = newAllocs;
           return newAllocs;
@@ -592,10 +618,11 @@ const Simulator = () => {
           // Selling: update allocations and add cash back
           // CRITICAL: To ensure cash conservation (buying and selling on same day gives same cash),
           // we MUST use the EXACT same calculation method as buying (just in reverse)
-          const soldOriginalAmount = currentAllocation - newValue;
+          // Use roundedNewValue to ensure consistency with buying calculation
+          const soldOriginalAmount = currentAllocation - roundedNewValue;
           
-          // Use EXACTLY the same rounding steps as buying to ensure symmetry:
-          // 1. Round the allocation difference first
+          // Use EXACTLY the same rounding steps as buying to ensure perfect symmetry:
+          // 1. Round the allocation difference first (same as buying)
           // 2. Then multiply by price ratio
           // 3. Then round the result
           const roundedSoldOriginalAmount = Math.round(soldOriginalAmount * 100) / 100;
@@ -615,7 +642,12 @@ const Simulator = () => {
             return newCash;
           });
           
-          const newAllocs = { ...prevAllocs, [companyId]: newValue };
+          // CRITICAL: Store the allocation value that matches the cash transaction exactly
+          // To ensure buy/sell symmetry, we must store: currentAllocation - roundedSoldOriginalAmount
+          // This ensures that if you buy X and then sell X, the stored values are consistent
+          const finalStoredAllocation = Math.round((currentAllocation - roundedSoldOriginalAmount) * 100) / 100;
+          
+          const newAllocs = { ...prevAllocs, [companyId]: finalStoredAllocation };
           // Update allocationsRef immediately to keep it in sync
           allocationsRef.current = newAllocs;
           return newAllocs;
@@ -788,7 +820,8 @@ const startSimulation = () => {
       setMaxDrawdown(0);
       // Initial portfolio value = investment value + cash (should be $10,000)
       const initialPortfolioValue = totalAllocated + remainingCash;
-      setPortfolioHistory([{ day: 0, value: initialPortfolioValue }]);
+      // Graph shows only current investment value (without cash)
+      setPortfolioHistory([{ day: 0, value: totalAllocated }]);
       setStockPrices(Object.fromEntries(levelCompanies.map(c => [c.id, c.currentValue])));
       setPortfolioPeak(initialPortfolioValue);
       setNewsInfluencedTrades(0);
@@ -819,6 +852,9 @@ const startSimulation = () => {
         initialHoldings["etf"] = 1;
       }
       setHoldingPeriods(initialHoldings);
+      
+      // Scroll to top when simulation starts
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -913,12 +949,12 @@ const startSimulation = () => {
       // Portfolio value = investment value + cash (total portfolio value)
       const newValue = Math.round((investmentValue + cash) * 100) / 100;
     
-    // Track minimum portfolio value for level 5
+    // Track minimum portfolio value for level 5 (uses total portfolio value including cash)
     if (currentLevel === 5) {
       setMinPortfolioValue(prev => Math.min(prev, newValue));
     }
     
-    // Track max drawdown for levels 3, 7
+    // Track max drawdown for levels 3, 7 (uses total portfolio value including cash)
     if (currentLevel === 3 || currentLevel === 7) {
       const currentPeak = Math.max(...portfolioHistory.map(p => p.value), portfolioPeak, totalAllocated);
       if (newValue > currentPeak) {
@@ -951,7 +987,9 @@ const startSimulation = () => {
       });
     }
 
-    setPortfolioHistory(prev => [...prev, { day: nextDayNum, value: newValue }]);
+    // Graph shows only current investment value (without cash)
+    const roundedInvestmentValue = Math.round(investmentValue * 100) / 100;
+    setPortfolioHistory(prev => [...prev, { day: nextDayNum, value: roundedInvestmentValue }]);
   };
 
   const checkWinConditions = (): boolean => {
@@ -1153,11 +1191,15 @@ const startSimulation = () => {
       const won = checkWinConditions();
       if (won && !completedLevels.includes(currentLevel)) {
         setCompletedLevels(prev => [...prev, currentLevel]);
+        // Save progress for logged-in users
+        if (user) {
+          markLevelComplete(user.id, currentLevel);
+        }
       }
       // Show completion dialog when level is finished
       setShowCompletionDialog(true);
     }
-  }, [currentDay, simulationStarted]);
+  }, [currentDay, simulationStarted, user, currentLevel, completedLevels]);
 
   // During simulation, use current portfolio value based on allocations
   // Outside simulation, use portfolio history or total allocated
@@ -1168,64 +1210,66 @@ const startSimulation = () => {
   const hasWon = currentDay >= config.maxDays && checkWinConditions();
   const levelUnlocked = (level: Level) => true; // All levels are accessible
 
-  // Level Selection Screen
+  // Level Selection Screen (default view)
   if (showLevelSelect) {
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <main className="flex-1">
-        <section className="bg-gradient-hero py-12 md:py-16">
-          <div className="container">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-accent-lighter px-4 py-2 text-sm font-medium text-accent-dark mb-4">
-                <Gamepad2 className="h-4 w-4" />
-                Educational Simulation
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1">
+          <section className="bg-gradient-hero py-6 md:py-8">
+            <div className="container">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-full bg-accent-lighter px-4 py-2 text-sm font-medium text-accent-dark mb-4">
+                  <Gamepad2 className="h-4 w-4" />
+                  Educational Simulation
                 </div>
                 <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-                  Market Simulator
+                  Choose a Level to Start Simulation
                 </h1>
-                <p className="text-lg text-muted-foreground mb-8">
+                <p className="text-lg text-muted-foreground">
                   Learn to invest through progressive levels. Each level teaches a new concept.
                 </p>
               </div>
             </div>
           </section>
 
-          <section className="py-12">
+          <section className="py-6">
             <div className="container">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {(Object.keys(levelConfig).map(Number) as Level[]).map((level) => {
-                  const config = levelConfig[level];
-                  const completed = completedLevels.includes(level);
-                  
-                  return (
-                    <Card 
-                      key={level} 
-                      variant="interactive"
-                      className="cursor-pointer"
-                      onClick={() => selectLevel(level)}
-                    >
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">
-                            Level {level}: {config.name}
-                          </CardTitle>
-                          {completed && <CheckCircle2 className="h-5 w-5 text-success" />}
-                        </div>
-                        <CardDescription>{config.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2 text-sm text-muted-foreground">
-                          <p>• {config.maxDays} days</p>
-                          <p>• {config.stocks.length} stocks</p>
-                          {config.showNews && <p>• News events</p>}
-                          {config.showETF && <p>• ETF available</p>}
-                          {level === 5 && <p>• Max 40% per stock</p>}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* Level Cards */}
+                <div className="space-y-4">
+                  <h2 className="font-display text-xl font-semibold text-foreground mb-4">
+                    Choose a Level
+                  </h2>
+                  {(Object.keys(levelConfig).map(Number) as Level[]).map((level) => {
+                    const levelConfigData = levelConfig[level];
+                    const completed = completedLevels.includes(level);
+                    
+                    return (
+                      <LevelCard
+                        key={level}
+                        level={level}
+                        config={levelConfigData}
+                        completed={completed}
+                        isSelected={selectedLevel === level}
+                        onSelect={() => setSelectedLevel(level)}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Level Preview */}
+                <div className="lg:sticky lg:top-24 h-fit">
+                  <LevelPreview
+                    level={selectedLevel}
+                    onStartSimulation={() => {
+                      if (selectedLevel) {
+                        selectLevel(selectedLevel);
+                        setShowLevelSelect(false);
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </section>
@@ -1240,7 +1284,7 @@ const startSimulation = () => {
       <Header />
       <main className="flex-1">
         {/* Hero */}
-        <section className="bg-gradient-hero py-12 md:py-16">
+        <section className="bg-gradient-hero py-6 md:py-8">
           <div className="container">
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full bg-accent-lighter px-4 py-2 text-sm font-medium text-accent-dark mb-4">
@@ -1319,7 +1363,7 @@ const startSimulation = () => {
         </section>
 
         {/* Main Content */}
-        <section className="py-12">
+        <section className="py-6">
           <div className="container">
             {!simulationStarted ? (
               <div className="grid gap-8 lg:grid-cols-3">
@@ -2487,13 +2531,14 @@ const startSimulation = () => {
                                     
                                     if (allocationDifference > 0) {
                                       // Buying: cap to what you can afford
-                                      // Use Math.round to allow full use of available cash
-                                      const roundedValue = Math.round(newValue);
-                                      const cappedValue = Math.min(roundedValue, Math.round(maxAffordableAllocation));
+                                      // Round to 2 decimals to match handleAllocationChange precision
+                                      const roundedValue = Math.round(newValue * 100) / 100;
+                                      const cappedValue = Math.min(roundedValue, Math.round(maxAffordableAllocation * 100) / 100);
                                       handleAllocationChange(companyId, [cappedValue]);
                                     } else {
                                       // Selling or no change: allow the value as-is (selling is always valid)
-                                      const roundedValue = Math.round(newValue);
+                                      // Round to 2 decimals to match handleAllocationChange precision
+                                      const roundedValue = Math.round(newValue * 100) / 100;
                                       handleAllocationChange(companyId, [roundedValue]);
                                     }
                                   }
@@ -2882,6 +2927,117 @@ function CompanyCard({
             <span className={riskColors[company.riskLevel]}>Risk: {company.riskLevel}</span>
             <span>Price: ${company.currentValue}</span>
           </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LevelCard({
+  level,
+  config,
+  completed,
+  isSelected,
+  onSelect
+}: {
+  level: Level;
+  config: typeof levelConfig[Level];
+  completed: boolean;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <Card
+      variant={isSelected ? "highlighted" : "interactive"}
+      className={`transition-all cursor-pointer ${isSelected ? "ring-2 ring-primary" : ""}`}
+      onClick={onSelect}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center gap-4">
+          <div className="flex-shrink-0 h-14 w-14 rounded-xl flex items-center justify-center bg-accent-lighter">
+            <Gamepad2 className="h-7 w-7 text-accent" />
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-display font-semibold text-foreground">
+                Level {level}: {config.name}
+              </h3>
+              {completed && (
+                <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0" />
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground truncate">{config.description}</p>
+          </div>
+
+          <div className="flex-shrink-0">
+            <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${isSelected ? "rotate-90" : ""}`} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LevelPreview({
+  level,
+  onStartSimulation
+}: {
+  level: Level | null;
+  onStartSimulation: () => void;
+}) {
+  if (!level) {
+    return (
+      <Card variant="glass" className="h-96 flex items-center justify-center">
+        <div className="text-center p-8">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+            <Gamepad2 className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="font-display text-xl font-semibold text-foreground mb-2">
+            Select a Level
+          </h3>
+          <p className="text-muted-foreground">
+            Click on any level to see a preview and start simulation
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
+  const config = levelConfig[level];
+
+  return (
+    <Card variant="highlighted" className="animate-scale-in">
+      <CardHeader>
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-accent-lighter text-accent mb-4">
+          <Gamepad2 className="h-7 w-7" />
+        </div>
+        <CardTitle className="text-2xl">Level {level}: {config.name}</CardTitle>
+        <CardDescription className="text-base">{config.description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="rounded-xl bg-muted/50 p-4">
+          <h4 className="font-semibold text-sm text-foreground mb-2 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-accent" />
+            Level Details
+          </h4>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>• {config.maxDays} days of simulation</p>
+            <p>• {config.stocks.length} stocks available</p>
+            {config.showNews && <p>• News events enabled</p>}
+            {config.showETF && <p>• ETF available</p>}
+            {level === 5 && <p>• Max 40% allocation per stock</p>}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            📊 {config.stocks.length} stocks • {config.maxDays} days
+          </span>
+          <Button variant="hero" onClick={onStartSimulation} className="group">
+            Start Simulation
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Button>
         </div>
       </CardContent>
     </Card>
